@@ -184,8 +184,9 @@ contract TradeEscrowTest is Test {
         
         // Withdraw profits
         uint256 ownerBalanceBefore = owner.balance;
+        uint256 profit = escrow.totalProfit();
         vm.prank(owner);
-        escrow.withdrawProfits(address(0), escrow.totalProfit());
+        escrow.withdrawProfits(address(0), profit);
         
         assertGt(owner.balance, ownerBalanceBefore);
     }

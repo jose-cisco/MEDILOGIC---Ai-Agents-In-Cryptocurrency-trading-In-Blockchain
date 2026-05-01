@@ -38,14 +38,14 @@ def get_mock_market_data(token_pair: str, chain: str) -> dict:
     }
     base = base_prices.get(token_pair, 1000)
     return {
-        "price": base + random.uniform(-base * 0.02, base * 0.02),
-        "volume_24h": random.uniform(1e9, 5e9),
-        "rsi_14": random.uniform(30, 70),
-        "macd_signal": random.choice(["bullish", "bearish", "neutral"]),
-        "sma_7": base * random.uniform(0.98, 1.02),
-        "sma_14": base * random.uniform(0.97, 1.03),
-        "sma_30": base * random.uniform(0.95, 1.05),
-        "tvl": random.uniform(1e10, 5e10),
+        "price": base + random.uniform(-base * 0.02, base * 0.02),  # nosec B311
+        "volume_24h": random.uniform(1e9, 5e9),  # nosec B311
+        "rsi_14": random.uniform(30, 70),  # nosec B311
+        "macd_signal": random.choice(["bullish", "bearish", "neutral"]),  # nosec B311
+        "sma_7": base * random.uniform(0.98, 1.02),  # nosec B311
+        "sma_14": base * random.uniform(0.97, 1.03),  # nosec B311
+        "sma_30": base * random.uniform(0.95, 1.05),  # nosec B311
+        "tvl": random.uniform(1e10, 5e10),  # nosec B311
         "chain": chain,
         "timestamp": datetime.utcnow().isoformat(),
     }

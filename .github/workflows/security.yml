@@ -264,12 +264,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Generate Python SBOM
-        uses: sbomify/github-action@v1
+      - name: Generate SBOM (Backend)
+        uses: anchore/sbom-action@v0
         with:
-          sbom-name: "AI Trading Platform Backend"
-          output-file: sbom-python.json
-          path: backend/requirements.txt
+          file: backend/requirements.txt
+          output-file: sbom-backend.spdx.json
+          format: spdx-json
+        continue-on-error: true
+      
+      - name: Generate SBOM (Frontend)
+        uses: anchore/sbom-action@v0
+        with:
+          file: frontend/package.json
+          output-file: sbom-frontend.spdx.json
           format: spdx-json
         continue-on-error: true
       

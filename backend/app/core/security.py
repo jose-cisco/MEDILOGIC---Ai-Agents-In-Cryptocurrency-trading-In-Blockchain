@@ -316,12 +316,13 @@ async def check_password_breached(password: str) -> bool:
         settings = get_settings()
         if not getattr(settings, 'PASSWORD_BREACH_CHECK_ENABLED', True):
             return False
-    except Exception:
+    except Exception:  # nosec B110
         pass
     
     import httpx
     
-    sha1 = hashlib.sha1(password.encode('utf-8')).hexdigest().upper()
+    # Use SHA1 for HaveIBeenPwned API (K-anonymity)
+    sha1 = hashlib.sha1(password.encode('utf-8')).hexdigest().upper()  # nosec B324
     prefix, suffix = sha1[:5], sha1[5:]
     
     try:
