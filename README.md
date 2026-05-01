@@ -777,8 +777,18 @@ For issues or questions:
 
 ---
 
-## License
+## 📜 License
 
-This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**. See the [LICENSE](LICENSE) file for the full text.
+**Dual Licensed:**
 
-Copyright (c) 2026 Medilogic
+- **AGPL-3.0** for open-source projects ([details](./LICENSE.md))
+- **Commercial License** available for proprietary use
+
+Using this AI trading agent in a closed-source SaaS product? You need a commercial license.  
+Contact: licensing@medilogic.com
+
+**Why AGPL?** We believe in open source, but the network copyleft ensures companies benefiting from our AI agents contribute back or purchase a license.
+
+---
+
+**Copyright © 2026 Medilogic**
