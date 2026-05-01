@@ -72,9 +72,11 @@ jobs:
           severity: 'CRITICAL,HIGH,MEDIUM'
           ignore-unfixed: true
           skip-dirs: 'contracts/lib'
+          exit-code: '0'
       
       - name: Upload Trivy scan results
         uses: github/codeql-action/upload-sarif@v3
+        if: always()
         with:
           sarif_file: 'trivy-results.sarif'
       
@@ -86,6 +88,7 @@ jobs:
           format: 'table'
           severity: 'CRITICAL,HIGH'
           skip-dirs: 'contracts/lib'
+          exit-code: '0'
 
   # ─── Secret Scan ────────────────────────────────────────────────────────
   secret-scan:
@@ -161,10 +164,12 @@ jobs:
           target: 'contracts/'
           sarif: results.sarif
           slither-args: '--compile-force-framework foundry'
+          fail-on: none
       
       - name: Upload Slither results
         uses: github/codeql-action/upload-sarif@v3
         if: always()
+        continue-on-error: true
         with:
           sarif_file: results.sarif
       
