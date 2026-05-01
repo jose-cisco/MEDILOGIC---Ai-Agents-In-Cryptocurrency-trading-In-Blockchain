@@ -169,9 +169,9 @@ jobs:
         with:
           target: 'contracts/'
           sarif: results.sarif
-          slither-args: '--compile-force-framework foundry'
+          slither-args: '--compile-force-framework foundry --solc-args "--base-path . --include-path lib"'
           fail-on: none
-      
+
       - name: Upload Slither results
         uses: github/codeql-action/upload-sarif@v4
         if: always()
@@ -182,6 +182,10 @@ jobs:
       - name: Run Foundry tests
         run: |
           cd contracts
+          # Create remappings.txt to assist compiler
+          echo "forge-std/=lib/forge-std/src/" > remappings.txt
+          echo "ds-test/=lib/forge-std/lib/ds-test/src/" >> remappings.txt
+          
           # Ensure forge dependencies are available
           if [ ! -d "lib/forge-std/src" ]; then
             echo "Installing forge-std..."
