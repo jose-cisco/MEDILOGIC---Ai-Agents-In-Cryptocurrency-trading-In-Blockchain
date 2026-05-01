@@ -9,6 +9,11 @@ on:
     # Run weekly security scan
     - cron: '0 6 * * 1'
 
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
 jobs:
   # ─── Dependency Vulnerability Scan ───────────────────────────────────────
   dependency-scan:
@@ -75,7 +80,7 @@ jobs:
           exit-code: '0'
       
       - name: Upload Trivy scan results
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         continue-on-error: true
         with:
@@ -168,7 +173,7 @@ jobs:
           fail-on: none
       
       - name: Upload Slither results
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         continue-on-error: true
         with:
