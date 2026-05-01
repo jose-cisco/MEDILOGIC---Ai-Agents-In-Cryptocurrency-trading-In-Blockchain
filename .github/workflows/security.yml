@@ -182,8 +182,10 @@ jobs:
         with:
           sarif_file: results.sarif
       
-      - name: Fix permissions for Foundry
-        run: sudo chown -R runner:docker .
+      - name: Clean and Fix permissions for Foundry
+        run: |
+          sudo rm -rf contracts/out contracts/cache
+          sudo chown -R runner:docker .
 
       - name: Run Foundry tests
         run: |
@@ -191,9 +193,6 @@ jobs:
           # Create remappings.txt to assist compiler
           echo "forge-std/=lib/forge-std/src/" > remappings.txt
           echo "ds-test/=lib/forge-std/lib/ds-test/src/" >> remappings.txt
-          
-          # Clean build artifacts to avoid conflicts
-          forge clean
           
           # Ensure forge dependencies are available
           if [ ! -d "lib/forge-std/src" ]; then
@@ -254,13 +253,13 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
           queries: security-extended
       
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@v4
         with:
           category: "/language:${{ matrix.language }}"
 
