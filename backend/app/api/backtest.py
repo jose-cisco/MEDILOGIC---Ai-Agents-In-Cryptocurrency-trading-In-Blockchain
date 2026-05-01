@@ -16,7 +16,13 @@ x402 PAYMENT EXEMPTION:
 """
 from fastapi import APIRouter, HTTPException
 from app.schemas.models import BacktestRequest, BacktestResult
-from app.core.llm import is_backtest_mode
+from app.core.llm import (
+    is_backtest_mode,
+    custom_llm_provider,
+    custom_llm_api_key,
+    custom_llm_base_url,
+    custom_llm_model,
+)
 
 router = APIRouter()
 
@@ -48,6 +54,13 @@ engine = LazyBacktestEngine()
 async def run_backtest(request: BacktestRequest):
     # Enforce zero-cost mode for this execution context
     is_backtest_mode.set(True)
+    
+    # Set custom LLM context for backtest if provided
+    custom_llm_provider.set(request.custom_llm_provider)
+    custom_llm_api_key.set(request.custom_llm_api_key)
+    custom_llm_base_url.set(request.custom_llm_base_url)
+    custom_llm_model.set(request.custom_llm_model)
+
     try:
         metrics = engine.run_backtest(
             strategy=request.strategy,

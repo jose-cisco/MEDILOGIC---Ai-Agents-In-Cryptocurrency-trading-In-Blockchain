@@ -111,6 +111,20 @@ class TradeRequest(BaseModel):
     request_timestamp: int = 0
     agent_signature: str = ""
     
+    # ─── Custom LLM Provider ─────────────────────────────────────────────────
+    custom_llm_provider: Optional[str] = Field(
+        default=None,
+        description="Custom LLM provider (e.g., 'openai', 'anthropic'). If set, overrides the default provider."
+    )
+    custom_llm_api_key: Optional[str] = Field(
+        default=None,
+        description="Custom API key for the LLM provider."
+    )
+    custom_llm_base_url: Optional[str] = Field(
+        default=None,
+        description="Custom base URL for the LLM provider API."
+    )
+
     def get_resolved_models(self) -> dict[str, str]:
         """
         Resolve model assignment for all agents.
@@ -226,6 +240,24 @@ class BacktestRequest(BaseModel):
     end_date: str
     initial_capital: float = 10000.0
     chain: ChainType = ChainType.ETHEREUM
+
+    # ─── Custom LLM Provider for Backtesting ─────────────────────────────────
+    custom_llm_provider: Optional[str] = Field(
+        default=None,
+        description="Custom LLM provider (e.g., 'openai', 'anthropic'). If set, overrides the default backtest provider."
+    )
+    custom_llm_api_key: Optional[str] = Field(
+        default=None,
+        description="Custom API key for the LLM provider."
+    )
+    custom_llm_base_url: Optional[str] = Field(
+        default=None,
+        description="Custom base URL for the LLM provider API."
+    )
+    custom_llm_model: Optional[str] = Field(
+        default=None,
+        description="Custom model name for the LLM provider."
+    )
 
 
 class BacktestResult(BaseModel):

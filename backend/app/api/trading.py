@@ -17,6 +17,13 @@ from app.blockchain.solana import SolanaClient
 from app.core.config import get_settings
 from app.core.x402 import x402_service, PaymentResource, get_resource_price
 from app.governance.agent_governance import governance_service
+from app.core.llm import (
+    is_backtest_mode,
+    custom_llm_provider,
+    custom_llm_api_key,
+    custom_llm_base_url,
+    custom_llm_model,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -298,6 +305,11 @@ def _convert_market_data_to_risk_format(market_data: dict, chain: str) -> Market
 
 @router.post("/execute", response_model=TradeResult)
 async def execute_trade(request: TradeRequest, http_request: Request):
+    # Set custom LLM context if provided
+    custom_llm_provider.set(request.custom_llm_provider)
+    custom_llm_api_key.set(request.custom_llm_api_key)
+    custom_llm_base_url.set(request.custom_llm_base_url)
+
     settings = get_settings()
     if settings.TRADING_MODE != "paper" and not settings.LIVE_TRADING_ENABLED:
         raise HTTPException(

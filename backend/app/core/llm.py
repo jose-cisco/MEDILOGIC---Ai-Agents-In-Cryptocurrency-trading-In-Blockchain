@@ -41,6 +41,13 @@ logger = logging.getLogger(__name__)
 # This ensures that cloud LLMs are NEVER instantiated during backtests to avoid costs.
 is_backtest_mode: ContextVar[bool] = ContextVar("is_backtest_mode", default=False)
 
+# ─── Custom LLM Overrides ──────────────────────────────────────────────────
+# Users can provide their own LLM API keys and base URLs per request.
+custom_llm_provider: ContextVar[Optional[str]] = ContextVar("custom_llm_provider", default=None)
+custom_llm_api_key: ContextVar[Optional[str]] = ContextVar("custom_llm_api_key", default=None)
+custom_llm_base_url: ContextVar[Optional[str]] = ContextVar("custom_llm_base_url", default=None)
+custom_llm_model: ContextVar[Optional[str]] = ContextVar("custom_llm_model", default=None)
+
 
 # ─── Direct Provider Model Catalogue ─────────────────────────────────────────
 # Each model connects directly to its provider - no OpenRouter routing.
@@ -304,6 +311,28 @@ def _get_cloud_llm(model_id: str, **kwargs) -> BaseChatModel:
     """
     settings = get_settings()
 
+    # ─── Custom LLM Override Logic ─────────────────────────────────────────
+    custom_provider = custom_llm_provider.get()
+    custom_key = custom_llm_api_key.get()
+    custom_url = custom_llm_base_url.get()
+    custom_mdl = custom_llm_model.get()
+
+    if custom_provider and custom_key:
+        from langchain_openai import ChatOpenAI
+        logger.info("Using custom LLM provider: %s", custom_provider)
+        return ChatOpenAI(
+            base_url=custom_url,  # Optional, can be None for native OpenAI/Anthropic etc. if using their SDKs, but ChatOpenAI uses it
+            api_key=custom_key,
+            model=custom_mdl or model_id,
+            temperature=kwargs.get("temperature", 0.1),
+            model_kwargs={
+                "top_p": kwargs.get("top_p", 0.92),
+                "frequency_penalty": kwargs.get("frequency_penalty", 0.0),
+                "presence_penalty": kwargs.get("presence_penalty", 0.0),
+            },
+            max_tokens=kwargs.get("max_tokens", 4096),
+        )
+
     # CRITICAL SAFETY: Never allow cloud models during backtests
     if is_backtest_mode.get():
         logger.error("ACCESS DENIED: Attempted to instantiate cloud model '%s' during backtest.", model_id)
@@ -556,6 +585,27 @@ def get_backtest_llm(**overrides) -> BaseChatModel:
     """
     params = _backtest_params()
     params.update(overrides)
+
+    # ─── Custom LLM Override for Backtesting ──────────────────────────────
+    custom_provider = custom_llm_provider.get()
+    custom_key = custom_llm_api_key.get()
+    custom_url = custom_llm_base_url.get()
+    custom_mdl = custom_llm_model.get()
+
+    if custom_provider and custom_key:
+        from langchain_openai import ChatOpenAI
+        logger.info("Using custom LLM provider for BACKTEST: %s", custom_provider)
+        return ChatOpenAI(
+            base_url=custom_url,
+            api_key=custom_key,
+            model=custom_mdl or "gpt-4o", # Default for custom if not specified
+            temperature=params.get("temperature", 0.15),
+            model_kwargs={
+                "top_p": params.get("top_p", 0.90),
+            },
+            max_tokens=params.get("num_predict", 4096),
+        )
+
     return _get_backtest_ollama_llm(**params)
 
 

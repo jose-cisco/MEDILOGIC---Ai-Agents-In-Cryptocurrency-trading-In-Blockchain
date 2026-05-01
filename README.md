@@ -678,6 +678,12 @@ npm run dev
 - Invalid 2FA → Block access
 - CRITICAL risk → Block execution
 
+### 5. Custom LLM Provider Support
+- Users can provide their own API keys and base URLs for LLM providers
+- Support for custom providers (OpenAI, Anthropic, etc.) via OpenAI-compatible endpoints
+- Per-request custom API configuration for both backtesting and live trading
+- No dependency on hardcoded system keys when custom keys are provided
+
 ---
 
 ## Troubleshooting
