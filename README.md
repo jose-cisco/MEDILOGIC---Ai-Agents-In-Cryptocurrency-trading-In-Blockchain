@@ -785,7 +785,6 @@ For issues or questions:
 - **Commercial License** available for proprietary use
 
 Using this AI trading agent in a closed-source SaaS product? You need a commercial license.  
-Contact: licensing@medilogic.com
 
 **Why AGPL?** We believe in open source, but the network copyleft ensures companies benefiting from our AI agents contribute back or purchase a license.
 

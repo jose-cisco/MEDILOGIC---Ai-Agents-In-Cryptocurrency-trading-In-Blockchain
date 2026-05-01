@@ -22,8 +22,6 @@ For commercial use without AGPL obligations, contact **Medilogic** for a commerc
 - ✅ Use in SaaS/API products without disclosure
 - ✅ Priority support and consulting
 
-**Contact:** licensing@medilogic.com
-
 ---
 
 **Copyright (C) 2026 Medilogic. All rights reserved.**
