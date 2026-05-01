@@ -774,3 +774,11 @@ For issues or questions:
 2. Review `risk_metadata` in API responses
 3. See `install.md` for detailed setup instructions
 4. See `RISK_REFERENCE.md` for risk system details
+
+---
+
+## License
+
+This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**. See the [LICENSE](LICENSE) file for the full text.
+
+Copyright (c) 2026 PITIPARK JIRAHIRANKIT (jose-cisco)
