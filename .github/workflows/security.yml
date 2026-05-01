@@ -179,12 +179,18 @@ jobs:
         with:
           sarif_file: results.sarif
       
+      - name: Fix permissions for Foundry
+        run: sudo chown -R runner:docker .
+
       - name: Run Foundry tests
         run: |
           cd contracts
           # Create remappings.txt to assist compiler
           echo "forge-std/=lib/forge-std/src/" > remappings.txt
           echo "ds-test/=lib/forge-std/lib/ds-test/src/" >> remappings.txt
+          
+          # Clean build artifacts to avoid conflicts
+          forge clean
           
           # Ensure forge dependencies are available
           if [ ! -d "lib/forge-std/src" ]; then
