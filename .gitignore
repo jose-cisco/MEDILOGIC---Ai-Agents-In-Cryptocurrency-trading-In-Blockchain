@@ -1,0 +1,57 @@
+# ── Secrets & Environment ────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+
+# ── API Keys & Credentials ───────────────────────────────────────────────
+*.pem
+*.key
+*.p12
+*.pfx
+secrets.json
+credentials.json
+service-account*.json
+
+# ── Python ───────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+*.egg
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# ── Database ──────────────────────────────────────────────────────────────
+*.db
+*.sqlite3
+chroma_db/
+
+# ── Node / Frontend ─────────────────────────────────────────────────────
+node_modules/
+frontend/dist/
+frontend/.vite/
+
+# ── IDE & OS ─────────────────────────────────────────────────────────────
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ── Docker ───────────────────────────────────────────────────────────────
+docker-compose.override.yml
+
+# ── Data (may contain sensitive trading logs) ────────────────────────────
+data/*.jsonl
+data/*.json
+!data/.gitkeep
+
+# ── Logs ─────────────────────────────────────────────────────────────────
+*.log
+logs/

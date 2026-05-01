@@ -1,0 +1,52 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_MODEL=glm-5
+      - DATABASE_URL=sqlite+aiosqlite:///./trading.db
+    volumes:
+      - ./data:/app/data
+      - ./chroma_db:/app/chroma_db
+    depends_on:
+      - ollama
+
+  gateway:
+    image: nginx:1.27-alpine
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./gateway/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_PROXY_TARGET=http://gateway:8080
+      - VITE_TRADING_MODE=${TRADING_MODE:-paper}
+      - LIVE_GUARD_SECRET=${LIVE_GUARD_SECRET:-}
+    depends_on:
+      - gateway
+
+  ollama:
+    image: ollama/ollama:latest
+    # No ports exposed to host — only accessible within Docker network
+    volumes:
+      - ollama_data:/root/.ollama
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - "ollama serve & sleep 5 && ollama pull glm-5 && wait"
+
+volumes:
+  ollama_data:

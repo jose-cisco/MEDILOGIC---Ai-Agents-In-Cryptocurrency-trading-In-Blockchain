@@ -1,0 +1,301 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Run weekly security scan
+    - cron: '0 6 * * 1'
+
+jobs:
+  # ─── Dependency Vulnerability Scan ───────────────────────────────────────
+  dependency-scan:
+    name: Dependency Vulnerability Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pip-audit
+          pip install -r backend/requirements.txt
+      
+      - name: Run pip-audit
+        run: |
+          pip-audit --requirement backend/requirements.txt --format json --output pip-audit-report.json || true
+      
+      - name: Upload pip-audit results
+        uses: actions/upload-artifact@v4
+        with:
+          name: pip-audit-report
+          path: pip-audit-report.json
+          retention-days: 30
+      
+      - name: Check for vulnerabilities
+        run: |
+          if [ -f pip-audit-report.json ]; then
+            vulns=$(jq '. | length' pip-audit-report.json 2>/dev/null || echo "0")
+            if [ "$vulns" -gt 0 ]; then
+              echo "⚠️ Found $vulns vulnerabilities in dependencies"
+              jq '.' pip-audit-report.json
+              exit 1
+            fi
+          fi
+          echo "✅ No vulnerabilities found in dependencies"
+
+  # ─── Code Security Scan ──────────────────────────────────────────────────
+  code-scan:
+    name: Code Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+          ignore-unfixed: true
+      
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+      
+      - name: Run Trivy for summary
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+
+  # ─── Secret Scan ────────────────────────────────────────────────────────
+  secret-scan:
+    name: Secret Detection
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Scan for secrets with TruffleHog
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          extra_args: --only-verified
+
+  # ─── Python Security Lint ───────────────────────────────────────────────
+  python-security:
+    name: Python Security Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install security tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install bandit safety
+          pip install -r backend/requirements.txt
+      
+      - name: Run Bandit security linter
+        run: |
+          bandit -r backend/app -f json -o bandit-report.json || true
+          bandit -r backend/app -f txt
+      
+      - name: Upload Bandit results
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-report
+          path: bandit-report.json
+          retention-days: 30
+      
+      - name: Run Safety check
+        run: |
+          safety check -r backend/requirements.txt --output json > safety-report.json || true
+          safety check -r backend/requirements.txt || true
+
+  # ─── Smart Contract Security ─────────────────────────────────────────────
+  contract-scan:
+    name: Smart Contract Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+      
+      - name: Run Slither
+        uses: crytic/slither-action@v0.3.0
+        id: slither
+        continue-on-error: true
+        with:
+          target: 'contracts/'
+          sarif: results.sarif
+      
+      - name: Upload Slither results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: results.sarif
+      
+      - name: Run Foundry tests
+        run: |
+          cd contracts
+          forge test -vvv
+      
+      - name: Check contract sizes
+        run: |
+          cd contracts
+          forge build --sizes
+
+  # ─── Docker Security ─────────────────────────────────────────────────────
+  docker-scan:
+    name: Docker Image Security
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Build backend image
+        run: |
+          docker build -t trading-backend:latest -f backend/Dockerfile ./backend
+      
+      - name: Scan backend image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'trading-backend:latest'
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+      
+      - name: Build frontend image
+        run: |
+          docker build -t trading-frontend:latest -f frontend/Dockerfile ./frontend
+        continue-on-error: true
+      
+      - name: Scan frontend image
+        uses: aquasecurity/trivy-action@master
+        continue-on-error: true
+        with:
+          image-ref: 'trading-frontend:latest'
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+
+  # ─── SAST with CodeQL ───────────────────────────────────────────────────
+  codeql:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ['python', 'javascript']
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-extended
+      
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
+
+  # ─── License Compliance ─────────────────────────────────────────────────
+  license-check:
+    name: License Compliance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install license checker
+        run: |
+          pip install pip-licenses
+      
+      - name: Check licenses
+        run: |
+          pip install -r backend/requirements.txt
+          pip-licenses --format=json --output-file=license-report.json || true
+          pip-licenses --from=mixed --format=plain --with-system | grep -E "(GPL|AGPL)" && echo "⚠️ Copyleft licenses found" || echo "✅ No problematic licenses"
+      
+      - name: Upload license report
+        uses: actions/upload-artifact@v4
+        with:
+          name: license-report
+          path: license-report.json
+          retention-days: 30
+
+  # ─── SBOM Generation ────────────────────────────────────────────────────
+  sbom:
+    name: Generate SBOM
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Generate Python SBOM
+        uses: sbomify/github-action@v1
+        with:
+          sbom-name: "AI Trading Platform Backend"
+          output-file: sbom-python.json
+          path: backend/requirements.txt
+          format: spdx-json
+        continue-on-error: true
+      
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom-*.json
+          retention-days: 90
+
+  # ─── Security Summary ───────────────────────────────────────────────────
+  security-summary:
+    name: Security Summary
+    runs-on: ubuntu-latest
+    needs: [dependency-scan, code-scan, secret-scan, python-security]
+    if: always()
+    steps:
+      - name: Check results
+        run: |
+          echo "## Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Scan | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Dependencies | ${{ needs.dependency-scan.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Code Scan | ${{ needs.code-scan.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Secret Scan | ${{ needs.secret-scan.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Python Security | ${{ needs.python-security.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Review the artifacts for detailed reports." >> $GITHUB_STEP_SUMMARY

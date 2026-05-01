@@ -1,0 +1,14 @@
+[tool.poetry]
+name = "ai-trading-agent"
+version = "1.0.0"
+description = "AI Agent Blockchain Trading System - Multi-agent crypto trading with Ollama GLM-5, LangGraph, backtesting, and Ethereum/Solana integration"
+authors = ["AI Trading Agent"]
+readme = "README.md"
+packages = [{include = "app"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
