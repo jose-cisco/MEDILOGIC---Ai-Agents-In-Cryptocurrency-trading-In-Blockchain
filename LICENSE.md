@@ -11,8 +11,6 @@ For open-source use, this software is licensed under the **GNU Affero General Pu
 - ✅ Network use = distribution (must share modifications even for SaaS)
 - ✅ Must license derivatives under AGPL-3.0
 
-See [LICENSE-AGPL](./LICENSE-AGPL) for full terms.
-
 ## 2. Commercial License
 
 For commercial use without AGPL obligations, contact **Medilogic** for a commercial license:
