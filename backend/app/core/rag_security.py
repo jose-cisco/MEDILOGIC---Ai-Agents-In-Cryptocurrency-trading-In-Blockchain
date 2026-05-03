@@ -324,8 +324,15 @@ class DocumentValidator:
         """Sanitize content to remove potentially dangerous elements."""
         sanitized = content
         
-        # Remove script tags
-        sanitized = re.sub(r'<script[^>]*>.*?</script>', '', sanitized, flags=re.IGNORECASE | re.DOTALL)
+        # Remove script tags (including permissive malformed closing tags browsers may accept)
+        script_tag_pattern = re.compile(
+            r"<script\b[^>]*>.*?</script\b[^>]*>",
+            flags=re.IGNORECASE | re.DOTALL,
+        )
+        previous = None
+        while previous != sanitized:
+            previous = sanitized
+            sanitized = script_tag_pattern.sub("", sanitized)
         
         # Remove javascript: URLs
         sanitized = re.sub(r'javascript\s*:[^"\'>\s]+', '', sanitized, flags=re.IGNORECASE)
