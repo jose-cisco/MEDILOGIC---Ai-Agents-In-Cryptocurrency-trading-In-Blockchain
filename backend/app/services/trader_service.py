@@ -19,7 +19,7 @@ class TraderService:
             "grok-sol-solana": {
                 "id": "grok-sol-solana",
                 "name": "Paper Beta - SOL Arbitrage",
-                "model": "Grok 4.20 (OpenRouter)",
+                "model": "Grok 4.3 (OpenRouter)",
                 "exchange": "SOL/USDT (Solana)",
                 "status": "RUNNING",
                 "uptime": "3d 4h",

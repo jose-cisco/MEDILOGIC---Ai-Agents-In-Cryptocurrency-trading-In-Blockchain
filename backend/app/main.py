@@ -96,6 +96,10 @@ def create_app() -> FastAPI:
     # ─── API Key Authentication Middleware ───────────────────────────────────────
     app.add_middleware(APIKeyMiddleware)
     
+    # ─── Device Ban & Abuse Detection Middleware ────────────────────────────────
+    from app.core.device_ban import device_ban_middleware
+    app.middleware("http")(device_ban_middleware)
+    
     # ─── Routes ───────────────────────────────────────────────────────────────────
     app.include_router(api_router, prefix="/api/v1")
 
@@ -103,6 +107,9 @@ def create_app() -> FastAPI:
     async def validate_environment() -> None:
         # Fail fast on startup for invalid or unsafe production env.
         get_settings().validate_runtime()
+        # Sync identity records from DynamoDB cloud store into local cache
+        from app.core.identity_verification import sync_cloud_on_startup
+        sync_cloud_on_startup()
         logger.info("Application started successfully - environment validated")
 
     @app.get("/health")

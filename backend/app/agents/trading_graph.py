@@ -280,7 +280,7 @@ def planner_node(state: AgentState) -> dict:
 
 def verifier_node(state: AgentState) -> dict:
     """Verifier — auto-assigned model_2."""
-    model_id = state.get("model_2", "grok-4.20")
+    model_id = state.get("model_2", "grok-4.3")
     llm = get_verifier_llm(model_id=model_id)
     planner_decision = json.dumps(state.get("planner_decision", {}), indent=2)
     market_summary = json.dumps(state.get("market_data", {}), indent=2)
@@ -402,7 +402,7 @@ def monitor_node(state: AgentState) -> dict:
 
 def adjust_node(state: AgentState) -> dict:
     """Adjuster — auto-assigned model_2."""
-    model_id = state.get("model_2", "grok-4.20")
+    model_id = state.get("model_2", "grok-4.3")
     llm = get_verifier_llm(model_id=model_id) # Reuse verifier factory
     
     monitor_strategy = json.dumps(state.get("monitoring_strategy", {}), indent=2)
@@ -461,3 +461,12 @@ def build_trading_graph() -> StateGraph:
     graph.add_edge("reject", END)
 
     return graph.compile()
+    selected_analysts = cfg.get("selected_analysts", ["market", "sentiment", "news", "fundamentals"])
+
+    if not selected_analysts:
+        raise ValueError("Debate graph requires at least one analyst type!")
+
+    # Conditional logic
+    cond = ConditionalLogic(
+        max_debate_rounds=cfg.get("max_debate_rounds", 1),
+    )

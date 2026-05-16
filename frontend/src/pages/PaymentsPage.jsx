@@ -437,7 +437,7 @@ function OpenRouterPanel() {
             </span>
           </div>
           <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-            High-reasoning models (GLM-5.1, Grok 4.20) with <strong style={{ color: 'var(--text-primary)' }}>enforced reasoning parameters</strong>.
+            High-reasoning models (GLM-5.1, Grok 4.3) with <strong style={{ color: 'var(--text-primary)' }}>enforced reasoning parameters</strong>.
           </p>
         </div>
       </div>

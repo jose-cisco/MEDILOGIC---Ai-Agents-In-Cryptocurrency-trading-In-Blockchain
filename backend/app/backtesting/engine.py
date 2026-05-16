@@ -7,10 +7,12 @@ from dataclasses import dataclass, field
 from app.core.llm import get_backtest_llm
 from langchain_core.messages import SystemMessage, HumanMessage
 from app.rag.knowledge_base import MarketKnowledgeBase
+from app.backtesting.mock_money import MockMoneyAccount, MockBalance
+from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
-BACKTEST_PROMPT = """You are an expert crypto trading strategy backtester AI (Ollama backtesting engine).
+BACKTEST_PROMPT = """You are an expert crypto trading strategy backtester AI (Ollama/Modal backtesting engine).
 Given historical market data and relevant RAG knowledge, simulate trading decisions as if you were operating in real-time.
 
 For each data point, return a JSON array of trade decisions:
@@ -22,11 +24,17 @@ Token Pair: {token_pair}
 Rules:
 - Start with initial capital of ${initial_capital}
 - Max position size: 20% of current portfolio value
-- Consider transaction fees of 0.1%
+- No transaction fees — pure simulation with no virtual costs
 - Use technical analysis indicators (RSI, MACD, Moving Averages) visible in the data
 - Apply zero-shot learning to detect unusual patterns
 - Cross-reference with provided RAG market knowledge for historical patterns
 - Record every buy/sell/hold decision with reasoning
+
+MOCK MONEY SIMULATION:
+- All trades use simulated (mock) cryptocurrency balances
+- Starting mock portfolio: ${{mock_usd}} USDT, {{mock_btc}} BTC, {{mock_eth}} ETH, {{mock_sol}} SOL
+- NO fees or slippage — pure simulation with zero virtual costs
+- NO REAL MONEY IS AT RISK — this is a simulation only
 
 Retrieved Market Knowledge:
 {rag_context}
@@ -49,7 +57,6 @@ class TradeRecord:
 
 
 @dataclass
-@dataclass
 class BacktestMetrics:
     initial_capital: float
     final_capital: float
@@ -64,9 +71,13 @@ class BacktestMetrics:
     profit_factor: float
     trades: list = field(default_factory=list)
     rag_metadata: dict = field(default_factory=dict)
+    # ── Mock Money Simulation Data ──────────────────────────────────────────
+    mock_money: dict = field(default_factory=dict)
+    """Mock portfolio balances and P&L from simulated crypto trading.
+    All values are virtual — NO REAL MONEY is at risk."""
 
 class BacktestEngine:
-    TRADING_FEE = 0.001
+    TRADING_FEE = 0  # No fees — pure simulation
     MAX_POSITION_PCT = 0.20
 
     def fetch_historical_data(
@@ -200,12 +211,21 @@ class BacktestEngine:
 
         rag_context, rag_metadata = self._get_rag_context_for_backtest(token_pair, strategy)
 
+        # Get mock money simulation settings
+        settings = get_settings()
+
         # Use dedicated backtest LLM route with optimal tuning
         llm = get_backtest_llm()
         prompt = BACKTEST_PROMPT.format(
             strategy=strategy,
             token_pair=token_pair,
             initial_capital=initial_capital,
+            mock_usd=settings.MOCK_MONEY_INITIAL_USD,
+            mock_btc=settings.MOCK_MONEY_INITIAL_BTC,
+            mock_eth=settings.MOCK_MONEY_INITIAL_ETH,
+            mock_sol=settings.MOCK_MONEY_INITIAL_SOL,
+            fee_pct=settings.MOCK_MONEY_FEE_PCT * 100,
+            slippage_pct=settings.MOCK_MONEY_SLIPPAGE_PCT * 100,
             market_data=market_data_str,
             rag_context=rag_context
             if rag_context
@@ -315,9 +335,7 @@ class BacktestEngine:
             )
 
             if action == "buy" and amount_usd > 0:
-                fee = amount_usd * self.TRADING_FEE
-                net_amount = amount_usd - fee
-                shares = net_amount / price
+                shares = amount_usd / price
                 position += shares
                 capital -= amount_usd
                 entry_price = price
@@ -337,9 +355,7 @@ class BacktestEngine:
             elif action == "sell" and position > 0:
                 shares_to_sell = min(amount_usd / price, position) if price > 0 else 0
                 gross = shares_to_sell * price
-                fee = gross * self.TRADING_FEE
-                net_proceeds = gross - fee
-                capital += net_proceeds
+                capital += gross
                 if entry_price > 0:
                     if price > entry_price:
                         winning += 1
@@ -351,7 +367,7 @@ class BacktestEngine:
                     TradeRecord(
                         date=date,
                         action="sell",
-                        amount_usd=net_proceeds,
+                        amount_usd=gross,
                         price=price,
                         reasoning=reasoning,
                         confidence=confidence,
@@ -411,6 +427,47 @@ class BacktestEngine:
             else 0
         )
 
+        # ── Mock Money Simulation ──────────────────────────────────────────────
+        # Run simulated crypto portfolio alongside the backtest.
+        # Uses MockMoneyAccount to track virtual BTC/ETH/SOL/USDT balances.
+        settings = get_settings()
+        mock_account = MockMoneyAccount(
+            initial_usdt=initial_capital,
+            initial_btc=settings.MOCK_MONEY_INITIAL_BTC,
+            initial_eth=settings.MOCK_MONEY_INITIAL_ETH,
+            initial_sol=settings.MOCK_MONEY_INITIAL_SOL,
+        )
+
+        # Extract prices from the historical data for mock simulation
+        mock_prices = {}
+        if not df.empty:
+            last_row = df.iloc[-1]
+            if "ETH" in token_pair.upper():
+                mock_prices["ETH"] = last_row["close"]
+                mock_prices["BTC"] = last_row["close"] * 20  # rough estimate
+                mock_prices["SOL"] = last_row["close"] / 20   # rough estimate
+            elif "BTC" in token_pair.upper():
+                mock_prices["BTC"] = last_row["close"]
+                mock_prices["ETH"] = last_row["close"] / 20
+                mock_prices["SOL"] = last_row["close"] / 400
+            elif "SOL" in token_pair.upper():
+                mock_prices["SOL"] = last_row["close"]
+                mock_prices["ETH"] = last_row["close"] * 20
+                mock_prices["BTC"] = last_row["close"] * 400
+
+        # Execute mock trades alongside the backtest trades
+        for t in trades:
+            if t.action in ("buy", "sell") and t.amount_usd > 0:
+                mock_account.execute_trade(
+                    side=t.action,
+                    symbol=token_pair,
+                    quantity=t.amount_usd / t.price if t.price > 0 else 0,
+                    price=t.price,
+                    current_prices=mock_prices,
+                )
+
+        mock_summary = mock_account.get_portfolio_summary(mock_prices)
+
         return BacktestMetrics(
             initial_capital=initial_capital,
             final_capital=round(final_value, 2),
@@ -438,4 +495,5 @@ class BacktestEngine:
                 for t in trades
             ],
             rag_metadata=rag_metadata,
+            mock_money=mock_summary,
         )

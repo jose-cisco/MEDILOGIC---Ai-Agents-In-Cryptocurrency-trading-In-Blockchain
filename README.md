@@ -12,14 +12,15 @@
 4. [Core Components](#core-components)
 5. [Multi-Agent Trading Flow](#multi-agent-trading-flow)
 6. [Risk Management System](#risk-management-system)
-7. [Notification System](#notification-system)
-8. [Escrow & Revenue System](#escrow--revenue-system)
-9. [API Reference](#api-reference)
-10. [Frontend Components](#frontend-components)
-11. [Configuration](#configuration)
-12. [Installation Guide](#installation-guide)
-13. [Safety Mechanisms](#safety-mechanisms)
-14. [Troubleshooting](#troubleshooting)
+7. [Enhancement Roadmap](#enhancement-roadmap--next-generation-trading-architecture)
+8. [Notification System](#notification-system)
+9. [Escrow & Revenue System](#escrow--revenue-system)
+10. [API Reference](#api-reference)
+11. [Frontend Components](#frontend-components)
+12. [Configuration](#configuration)
+13. [Installation Guide](#installation-guide)
+14. [Safety Mechanisms](#safety-mechanisms)
+15. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -85,7 +86,7 @@ The AI Agent Trading System is a multi-agent blockchain trading platform that co
 │  ┌─────────────────────────▼───────────────────────────────────────────────┐ │
 │  │                      LLM PROVIDERS (OpenRouter)                          │ │
 │  │  ┌────────────┐  ┌────────────────┐  ┌────────────┐  ┌──────────────┐   │ │
-│  │  │  GLM-5.1   │  │ Grok 4.20 0309 │  │MiMo-V2-Pro │  │Qwen 3.6 Plus │   │ │
+│  │  │  GLM-5.1   │  │ Grok 4.3 │  │MiMo-V2-Pro │  │Qwen 3.6 Plus │   │ │
 │  │  │ (Reasoning)│  │  (Reasoning)   │  │ (Xiaomi)   │  │  (Alibaba)   │   │ │
 │  │  └────────────┘  └────────────────┘  └────────────┘  └──────────────┘   │ │
 │  └──────────────────────────────────────────────────────────────────────────┘ │
@@ -178,7 +179,7 @@ The orchestrator coordinates five specialized agents:
 | Agent | Role | Default Model | Output |
 |-------|------|----------------|--------|
 | **Planner** | Market analysis & trade proposal | GLM-5.1 | action, confidence, risk_score, reasoning |
-| **Verifier** | Security audit & risk adjustment | Grok 4.20 0309 | approved, adjusted_risk_score, vulnerabilities |
+| **Verifier** | Security audit & risk adjustment | Grok 4.3 | approved, adjusted_risk_score, vulnerabilities |
 | **Controller** | Final decision (PoT consensus) | GLM-5.1 | final_action, final_amount, pot_confidence |
 | **Monitor** | Post-execution tracking | GLM-5.1 | tracking_mode, tp_sl_strategy |
 | **Adjuster** | Reactive self-correction | GLM-5.1 | early_exit_conditions, parameter_shifts |
@@ -200,20 +201,20 @@ All five agents (Planner, Verifier, Controller, Monitor, Adjuster) will use the 
 | Model | Description | Reasoning | Image Input |
 |-------|-------------|-----------|-------------|
 | `glm-5.1` | GLM-5.1 (Reasoning) | ✅ ON | ❌ NO |
-| `grok-4.20-0309` | Grok 4.20 0309 (Reasoning) v1 | ✅ ON | ✅ **YES** |
+| `grok-4.3` | Grok 4.3 (Reasoning) v1 | ✅ ON | ✅ **YES** |
 | `grok-4.20-0309-v2` | Grok 4.20 0309 (Reasoning) v2 | ✅ ON | ✅ **YES** |
 | `mimo-v2-pro` | MiMo-V2-Pro (Reasoning) | ✅ ON | ❌ NO |
 | `qwen-3.6-plus` | Qwen 3.6 Plus (Reasoning) | ✅ ON | ❌ NO |
 
 ### Image Input Support
 
-**⚠️ IMPORTANT: Image input is ONLY supported by Grok 4.20 0309 (v1 and v2).**
+**⚠️ IMPORTANT: Image input is ONLY supported by Grok 4.3 (v1 and v2).**
 
 If you provide an `image_url` with other models (glm-5.1, mimo-v2-pro, qwen-3.6-plus), the image will be **IGNORED** and only text will be processed.
 
 #### Using Image Input
 
-To use image input with Grok 4.20 0309 models, include the `image_url` parameter in your trade request:
+To use image input with Grok 4.3 models, include the `image_url` parameter in your trade request:
 
 ```json
 {
@@ -315,8 +316,8 @@ The system includes an **LLM Auto-Tune System** that automatically configures op
 | Model | Temperature Multiplier | Top_P Multiplier | Notes |
 |-------|----------------------|------------------|-------|
 | GLM-5.1 | 0.9x | 1.0x | Handles complex tasks well |
-| Grok 4.20 0309 v1 | 0.85x | 0.95x | Excellent for security/verification |
-| Grok 4.20 0309 v2 | 0.85x | 0.95x | Latest xAI reasoning model |
+| Grok 4.3 v1 | 0.85x | 0.95x | Excellent for security/verification |
+| Grok 4.3 v2 | 0.85x | 0.95x | Latest xAI reasoning model |
 | MiMo-V2-Pro | 0.9x | 1.0x | Xiaomi's reasoning model |
 | Qwen 3.6 Plus | 0.95x | 1.0x | Alibaba's reasoning model |
 
@@ -342,7 +343,7 @@ from app.core.llm import (
 )
 
 planner_llm = get_auto_tuned_planner_llm(model_id="glm-5.1", is_live=True)
-verifier_llm = get_auto_tuned_verifier_llm(model_id="grok-4.20-0309", is_live=True)
+verifier_llm = get_auto_tuned_verifier_llm(model_id="grok-4.3", is_live=True)
 ```
 
 The system automatically:
@@ -385,6 +386,391 @@ Activity-based notifications sent to user's Gmail/Hotmail:
 - Security alerts
 - Account status emails
 - Daily/weekly reports
+
+
+## Multi-Agent Trading Flow
+
+### Current Pipeline (Classic Mode)
+
+The system uses a linear agent pipeline where each agent processes sequentially:
+
+```
+┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐
+│ Planner  │───▶│ Verifier │───▶│Controller│───▶│ Monitor │───▶│ Adjuster│
+│(model_1) │    │(model_2) │    │(model_1) │    │(model_1) │    │(model_2)│
+└──────────┘    └──────────┘    └────┬─────┘    └──────────┘    └──────────┘
+                                     │
+                              ┌──────┴──────┐
+                              │  approved?  │
+                              └──────┬──────┘
+                               Yes ↙     ↘ No
+                          ┌────────┐  ┌────────┐
+                          │Execute │  │ Reject │
+                          └────────┘  └────────┘
+```
+
+#### Agent Responsibilities
+
+| Step | Agent | Model | Input | Output |
+|------|-------|-------|-------|--------|
+| 1 | **Planner** | model_1 | Market data + RAG context | Trade action, confidence, risk_score, reasoning |
+| 2 | **Verifier** | model_2 | Planner decision + RAG context | approved, adjusted_risk_score, vulnerabilities |
+| 3 | **Controller** | model_1 | Planner + Verifier + RAG summary | Final go/no-go (Proof-of-Thought consensus) |
+| 4 | **Monitor** | model_1 | Final decision | Tracking mode, TP/SL strategy |
+| 5 | **Adjuster** | model_2 | Monitoring strategy | Early exit conditions, parameter shifts |
+
+#### State Schema
+
+The `AgentState` TypedDict carries all data through the graph:
+
+```python
+class AgentState(TypedDict):
+    messages: Annotated[list, add_messages]
+    market_data: dict
+    trade_prompt: str
+    token_pair: str
+    chain: str
+    rag_context: str
+    rag_metadata: dict
+    model_1: str                    # Planner + Controller
+    model_2: str                    # Verifier
+    planner_decision: dict
+    verifier_result: dict
+    controller_approval: bool
+    final_decision: dict
+    risk_score: float
+    monitoring_strategy: dict
+    adjustment_logic: dict
+```
+
+#### Conditional Routing
+
+The graph uses a single conditional edge at the Controller node:
+
+```python
+def should_execute(state: AgentState) -> Literal["execute", "reject"]:
+    return "execute" if state.get("controller_approval", False) else "reject"
+```
+
+---
+
+## Risk Management System
+
+### Pre-Execution Risk Assessment
+
+Before any trade execution, the Risk Engine (`backend/app/risk/risk_engine.py`) performs a multi-factor assessment:
+
+```python
+# Weighted risk components
+volatility_risk = assess_volatility(market_data) * 0.30
+drawdown_risk = assess_drawdown(market_data) * 0.25
+liquidity_risk = assess_liquidity(market_data) * 0.25
+onchain_risk = assess_onchain(onchain_data) * 0.20
+
+overall_score = volatility_risk + drawdown_risk + liquidity_risk + onchain_risk
+```
+
+### Risk Levels
+
+| Level | Score Range | Action |
+|-------|-------------|--------|
+| LOW | 0–25 | Full execution allowed |
+| MEDIUM | 26–50 | Execution with caution |
+| HIGH | 51–75 | Reduced position size |
+| CRITICAL | 76–100 | Execution blocked |
+
+### Risk API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/trading/risk/assess` | POST | Assess trade risk |
+| `/api/v1/trading/risk/metrics` | GET | Get risk metrics |
+| `/api/v1/trading/risk/calibrate` | GET | Calibrate risk weights |
+
+### Risk Storage
+
+All risk assessments are persisted to SQLite via `backend/app/risk/risk_storage.py` for historical analysis and calibration.
+
+---
+
+## Enhancement Roadmap — Next-Generation Trading Architecture
+
+> This section documents planned enhancements to evolve the current linear pipeline into a more sophisticated multi-agent system, based on established AI agent research patterns (Park et al. 2023, Du et al. 2023, Liang et al. 2023) and LangGraph best practices.
+
+### Current vs. Target Architecture
+
+| Feature | Current State | Target State | Priority |
+|---------|--------------|--------------|----------|
+| **Agent Pipeline** | Linear: Planner→Verifier→Controller→Monitor→Adjust | Debate: Analysts→Bull/Bear Debate→Synthesis→Trader→Risk Debate→Portfolio Decision | 🔴 High |
+| **Agent Roles** | 5 agents (Planner, Verifier, Controller, Monitor, Adjuster) | 12+ agents (4 Crypto Analysts, Bull/Bear Researchers, Research Synthesizer, Trader, 3 Risk Debators, Portfolio Manager) | 🔴 High |
+| **Decision Mechanism** | Proof-of-Thought (PoT) single-pass consensus | Multi-round adversarial debate with opposing viewpoints | 🔴 High |
+| **Structured Output** | JSON parsing with fallback dicts | Pydantic-validated models (TraderProposal, PortfolioDecision) | 🔴 High |
+| **Tool-Calling** | None (agents use injected market data) | `llm.bind_tools()` + ToolNode for live on-demand data fetching | 🟡 Medium |
+| **Data Tools** | CoinGecko (via API routes only) | Crypto-native tools: CoinGecko, DeFiLlama, CryptoCompare, LunarCrush, Dune Analytics | 🟡 Medium |
+| **Rating System** | 3-tier (buy/sell/hold) | 5-tier: Strong Buy / Buy / Hold / Sell / Strong Sell | 🔴 High |
+| **Signal Processing** | Not present | Automated rating extraction from Portfolio Manager decisions | 🔴 High |
+| **Investment Debate** | Not present | Bull vs Bear researcher debate with configurable rounds | 🟡 Medium |
+| **Risk Debate** | Single-pass risk engine scoring | Aggressive vs Conservative vs Neutral debator rounds | 🟡 Medium |
+| **Trading Memory** | Not present | Persistent decision log with outcome tracking and reflection | 🟡 Medium |
+| **Reflection** | Not present | LLM-generated reflection on past decisions for continuous improvement | 🟢 Low |
+| **Conditional Routing** | Single should_execute() edge | Per-analyst tool-call routing + debate round counting + risk debate cycling | 🟡 Medium |
+| **Checkpoint/Resume** | Not present | SqliteSaver-based graph state persistence for crash recovery | 🟢 Low |
+
+### Enhancement 1: Multi-Agent Debate Architecture
+
+**Strategy**: Replace the linear pipeline with an adversarial debate architecture where opposing agents argue for and against investment decisions. This approach is grounded in multi-agent debate research showing that opposing viewpoints produce more robust decisions than single-pass consensus (Du et al., 2023 "Improving Factuality and Reasoning in Language Models through Multiagent Debate").
+
+**Planned Flow**:
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        ANALYST PHASE                                        │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────────┐             │
+│  │  Market  │  │Sentiment │  │  News    │  │  On-Chain /      │             │
+│  │ Analyst  │  │ Analyst  │  │ Analyst  │  │  Fundamentals    │             │
+│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────────────┘             │
+│       │              │              │              │                          │
+│       └──────────────┴──────────────┴──────────────┘                          │
+│                             │                                               │
+│                     Analyst Reports                                         │
+└─────────────────────────────┼───────────────────────────────────────────────┘
+                              │
+┌─────────────────────────────▼───────────────────────────────────────────────┐
+│                     INVESTMENT DEBATE PHASE                                 │
+│                                                                             │
+│   ┌──────────────┐          ┌──────────────┐                                │
+│   │    Bull      │◀───▶    │    Bear      │  (max_debate_rounds)           │
+│   │  Researcher  │  Debate │  Researcher  │                                │
+│   └──────┬───────┘         └──────┬───────┘                                │
+│          │                        │                                         │
+│          └────────────┬───────────┘                                         │
+│                        │                                                     │
+│               ┌────────▼────────┐                                           │
+│               │    Research     │                                           │
+│               │   Synthesizer   │                                           │
+│               └────────┬────────┘                                           │
+└────────────────────────┼────────────────────────────────────────────────────┘
+                         │
+┌────────────────────────▼────────────────────────────────────────────────────┐
+│                      TRADING PHASE                                          │
+│               ┌────────────────┐                                           │
+│               │     Trader     │  (structured proposal)                    │
+│               └───────┬────────┘                                           │
+└───────────────────────┼────────────────────────────────────────────────────┘
+                         │
+┌────────────────────────▼────────────────────────────────────────────────────┐
+│                      RISK DEBATE PHASE                                      │
+│                                                                             │
+│   ┌──────────────┐  ┌──────────────┐  ┌──────────────┐                     │
+│   │  Aggressive  │  │ Conservative │  │   Neutral    │  (max_risk_rounds)  │
+│   │   Debator    │◀─▶│   Debator    │◀─▶│   Debator   │                     │
+│   └──────┬───────┘  └──────┬───────┘  └──────┬───────┘                     │
+│          └─────────────────┼─────────────────┘                              │
+│                      │                                                      │
+│            ┌─────────▼──────────┐                                           │
+│            │  Portfolio Manager │  (5-tier rating decision)                │
+│            └────────────────────┘                                           │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Key Advantage Over Current System**: The adversarial debate forces the system to consider both bullish and bearish evidence, reducing confirmation bias that can occur in a single-pass pipeline.
+
+### Enhancement 2: Crypto-Native Data Tools with Tool-Calling
+
+**Strategy**: Equip each analyst with LangChain `@tool` functions that fetch live data on-demand via `llm.bind_tools()` + LangGraph `ToolNode`. This is superior to pre-fetching all data at the API layer because:
+1. Agents only fetch data they actually need (cost efficient)
+2. Agents can make multiple tool calls in sequence (depth of analysis)
+3. The graph conditionally routes to tool nodes only when needed
+
+**Planned Crypto-Native Tool Sets**:
+
+| Analyst | Tools | Data Sources |
+|---------|-------|-------------|
+| **Market Analyst** | `get_crypto_price_data()`, `get_technical_indicators()`, `get_dex_liquidity()` | CoinGecko API, DEX Screener |
+| **Sentiment Analyst** | `get_social_sentiment()`, `get_whale_alerts()`, `get_fear_greed_index()` | LunarCrush API, Whale Alert, Alternative.me |
+| **News Analyst** | `get_crypto_news()`, `get_global_crypto_news()`, `get_regulatory_updates()` | CryptoCompare API, CoinGecko News |
+| **On-Chain Analyst** | `get_on_chain_metrics()`, `get_tokenomics()`, `get_defi_protocols()`, `get_protocol_security()` | DeFiLlama API, Dune Analytics, CoinGecko |
+
+**Technical Indicators** (computed client-side from CoinGecko OHLCV):
+- RSI (14-period), MACD, Bollinger Bands
+- SMA (20/50/200), EMA (12/26)
+- ATR (volatility), VWMA (volume-weighted)
+
+**Conditional Routing for Tool-Calling**:
+```python
+def should_continue_market(state: AgentState) -> str:
+    # Route to ToolNode if agent makes tool calls, otherwise proceed
+    last_message = state["messages"][-1]
+    if last_message.tool_calls:
+        return "tools_market"    # Execute tool calls
+    return "msg_clear_market"    # Proceed to next analyst
+```
+
+### Enhancement 3: 5-Tier Portfolio Rating System
+
+**Strategy**: Expand from 3 actions (buy/sell/hold) to a 5-tier rating system that captures conviction levels, inspired by institutional portfolio management practices.
+
+| Rating | Meaning | Position Action |
+|--------|---------|----------------|
+| **Strong Buy** | High conviction bullish | Enter full position |
+| **Buy** | Moderate conviction bullish | Enter half position |
+| **Hold** | Neutral / wait | Maintain current position |
+| **Sell** | Moderate conviction bearish | Exit half position |
+| **Strong Sell** | High conviction bearish | Exit full position |
+
+**Signal Processing**: Extract the rating from the Portfolio Manager's structured output using regex patterns:
+```python
+RATING_PATTERNS = [
+    (r"strong\s*buy", "Strong Buy"),
+    (r"buy|overweight|long", "Buy"),
+    (r"hold|neutral|maintain", "Hold"),
+    (r"sell|underweight|short", "Sell"),
+    (r"strong\s*sell", "Strong Sell"),
+]
+```
+
+### Enhancement 4: Structured Output with Pydantic Validation
+
+**Strategy**: Replace free-form JSON parsing with Pydantic-validated models that enforce typed agent outputs, reducing parse errors and enabling downstream type checking.
+
+```python
+from pydantic import BaseModel, Field
+from enum import Enum
+
+class RatingTier(str, Enum):
+    STRONG_BUY = "Strong Buy"
+    BUY = "Buy"
+    HOLD = "Hold"
+    SELL = "Sell"
+    STRONG_SELL = "Strong Sell"
+
+class TraderProposal(BaseModel):
+    # Structured output from the Trader agent
+    token_pair: str = Field(description="Trading pair analyzed")
+    action: str = Field(description="Proposed action: buy/sell/hold")
+    quantity: float = Field(description="Proposed trade quantity")
+    reasoning: str = Field(description="Detailed reasoning for the proposal")
+    confidence: float = Field(ge=0.0, le=1.0, description="Confidence level")
+
+class PortfolioDecision(BaseModel):
+    # Structured output from the Portfolio Manager
+    rating: RatingTier = Field(description="5-tier portfolio rating")
+    reasoning: str = Field(description="Detailed reasoning for the rating")
+    confidence: float = Field(ge=0.0, le=1.0, description="Confidence level")
+    position_adjustment: str = Field(description="Suggested position change")
+```
+
+### Enhancement 5: Risk Debate Agents
+
+**Strategy**: Replace the single-pass risk scoring with a 3-agent adversarial debate that evaluates the Trader's proposal from different risk perspectives.
+
+| Agent | Perspective | Risk Tolerance |
+|-------|------------|----------------|
+| **Aggressive Debator** | Maximizes return potential | High risk tolerance, favors leverage and concentrated positions |
+| **Conservative Debator** | Prioritizes capital preservation | Low risk tolerance, favors diversification and stop-losses |
+| **Neutral Debator** | Balanced risk-reward assessment | Moderate risk tolerance, weighs both upside and downside |
+
+**Debate Flow**:
+```
+Trader Proposal → Aggressive → Conservative → Neutral → (cycle for max_risk_rounds) → Portfolio Manager
+```
+
+**State Tracking**:
+```python
+class RiskDebateState(TypedDict):
+    aggressive_history: str    # Aggressive debator's arguments
+    conservative_history: str  # Conservative debator's arguments
+    neutral_history: str      # Neutral debator's arguments
+    latest_speaker: str       # Who spoke last (for routing)
+    count: int                 # Current round count
+```
+
+### Enhancement 6: Trading Memory Log with Reflection
+
+**Strategy**: Implement an append-only decision log that persists across trading sessions, enabling the system to learn from past decisions.
+
+**Two-Phase System**:
+- **Phase A (Decision Time)**: `store_decision()` records the token pair, action, reasoning, confidence, and market conditions
+- **Phase B (Outcome Resolution)**: `update_with_outcome()` resolves pending entries with actual returns after the holding period
+
+**Memory Context Injection**:
+```python
+# Before each new analysis, inject past context
+past_context = memory_log.get_past_context(
+    ticker="ETH/USDT",
+    n_same=5,     # Last 5 decisions for same pair
+    n_cross=3,   # Last 3 decisions for other pairs (cross-market lessons)
+)
+```
+
+**Reflection**: After each trading session, an LLM generates a reflection on the decision quality, stored alongside the decision for future reference.
+
+### Enhancement 7: Checkpoint/Resume System
+
+**Strategy**: Use LangGraph's `SqliteSaver` to persist graph state per token pair, enabling crash recovery for long-running debate graphs.
+
+```python
+from langgraph.checkpoint.sqlite import SqliteSaver
+
+# Each token pair gets a deterministic thread ID
+def thread_id(token_pair: str, trade_date: str) -> str:
+    return f"{token_pair}_{trade_date}"
+
+# Graph recompiled with checkpointer when enabled
+checkpointer = SqliteSaver.from_conn_string("./data/checkpoints.db")
+compiled_graph = workflow.compile(checkpointer=checkpointer)
+```
+
+### Enhancement 8: Debate State Schema
+
+**Strategy**: Extend the current `AgentState` with debate-specific fields to support the multi-agent debate architecture.
+
+```python
+class InvestDebateState(TypedDict):
+    # Tracks the Bull/Bear investment debate
+    bull_history: str       # Bull researcher's arguments
+    bear_history: str       # Bear researcher's arguments
+    history: str            # Full debate history
+    current_response: str   # Latest response
+    count: int               # Current round count
+
+class EnhancedAgentState(MessagesState):
+    # Extended state for the debate architecture
+    # Existing fields
+    token_pair: str
+    chain: str
+    model_1: str
+    model_2: str
+
+    # Analyst reports
+    market_report: str
+    sentiment_report: str
+    news_report: str
+    onchain_report: str
+
+    # Investment debate
+    investment_debate_state: InvestDebateState
+    investment_plan: str
+
+    # Trading
+    trader_investment_plan: str
+
+    # Risk debate
+    risk_debate_state: RiskDebateState
+    final_trade_decision: str
+
+    # Memory
+    past_context: str        # Injected from TradingMemoryLog
+```
+
+### Implementation Priority Summary
+
+| Phase | Features | Timeline |
+|-------|----------|----------|
+| **Phase 1** | Structured Output + 5-Tier Rating + Signal Processing | 1–2 weeks |
+| **Phase 2** | Multi-Agent Debate Architecture + Debate State Schema | 2–3 weeks |
+| **Phase 3** | Crypto-Native Data Tools + Tool-Calling + Conditional Routing | 2–3 weeks |
+| **Phase 4** | Risk Debate Agents + Trading Memory Log | 2–3 weeks |
+| **Phase 5** | Checkpoint/Resume + Reflection | 1–2 weeks |
 
 ---
 
@@ -576,7 +962,7 @@ LIVE_TRADING_ENABLED=false      # Must be true for live
 # LLM Configuration
 OPENROUTER_API_KEY=sk-xxx      # OpenRouter API key
 DEFAULT_MODEL_1=glm-5.1        # Planner + Controller
-DEFAULT_MODEL_2=grok-4.20      # Verifier
+DEFAULT_MODEL_2=grok-4.3      # Verifier
 
 # Authentication
 JWT_SECRET=your-secret-key     # JWT signing key
@@ -677,12 +1063,6 @@ npm run dev
 - API failures → Block execution
 - Invalid 2FA → Block access
 - CRITICAL risk → Block execution
-
-### 5. Custom LLM Provider Support
-- Users can provide their own API keys and base URLs for LLM providers
-- Support for custom providers (OpenAI, Anthropic, etc.) via OpenAI-compatible endpoints
-- Per-request custom API configuration for both backtesting and live trading
-- No dependency on hardcoded system keys when custom keys are provided
 
 ---
 

@@ -263,8 +263,8 @@ MODEL_SPECIFIC_TUNING = {
         "top_p_multiplier": 1.0,
         "reasoning_optimal": True,
     },
-    # Grok 4.20 0309: Excellent for security and verification
-    "grok-4.20-0309": {
+    # Grok 4.3: Excellent for security and verification
+    "grok-4.3": {
         "temperature_multiplier": 0.85,  # Lower temp for precision
         "top_p_multiplier": 0.95,
         "reasoning_optimal": True,
@@ -292,7 +292,7 @@ class LLMAutoTuner:
         tuner = LLMAutoTuner()
         params = tuner.get_optimal_params(
             task_type=TaskType.SECURITY_AUDIT,
-            model_id="grok-4.20-0309",
+            model_id="grok-4.3",
             complexity=ComplexityLevel.COMPLEX,
             risk_level=RiskLevel.HIGH,
         )

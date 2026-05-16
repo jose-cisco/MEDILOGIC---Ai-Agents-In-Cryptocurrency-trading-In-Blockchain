@@ -21,35 +21,35 @@ class CloudLLMProvider(str, Enum):
     
     Model routing (direct provider connection):
     - glm-5.1: GLM reasoning model (io.net) - TEXT ONLY
-    - grok-4.20-0309: xAI Grok 4.20 0309 Reasoning v1 - TEXT + IMAGE
+    - grok-4.3: xAI Grok 4.3 Reasoning v1 - TEXT + IMAGE
     - grok-4.20-0309-v2: xAI Grok 4.20 0309 Reasoning v2 - TEXT + IMAGE
     - mimo-v2-pro: Xiaomi MiMo-V2-Pro reasoning model - TEXT ONLY
     - qwen-3.6-plus: Alibaba Qwen 3.6 Plus reasoning model - TEXT ONLY
     
     Image Input Support:
-    - ONLY Grok 4.20 0309 (v1 and v2) support image input
+    - ONLY Grok 4.3 (v1 and v2) support image input
     - Other models will ignore image_url if provided
     
     Each agent can independently use any of these models.
     """
     GLM_5_1 = "glm-5.1"
-    GROK_4_20_0309 = "grok-4.20-0309"  # v1 - supports IMAGE INPUT
+    GROK_4_20_0309 = "grok-4.3"  # v1 - supports IMAGE INPUT
     GROK_4_20_0309_V2 = "grok-4.20-0309-v2"  # v2 - supports IMAGE INPUT
     MIMO_V2_PRO = "mimo-v2-pro"
     QWEN_3_6_PLUS = "qwen-3.6-plus"
     
     # Legacy aliases for backward compatibility
     GLM_5 = "glm-5.1"  # Alias to GLM-5.1
-    GROK_4_20 = "grok-4.20-0309"  # Alias to Grok 4.20 0309 v1
+    GROK_4_20 = "grok-4.3"  # Alias to Grok 4.3 v1
     
     @classmethod
     def supports_image(cls, model_id: str) -> bool:
         """Check if a model supports image input.
         
-        ONLY Grok 4.20 0309 (v1 and v2) support image input.
+        ONLY Grok 4.3 (v1 and v2) support image input.
         All other models are TEXT ONLY.
         """
-        return model_id in ("grok-4.20-0309", "grok-4.20-0309-v2")
+        return model_id in ("grok-4.3", "grok-4.20-0309-v2")
 
 
 class TradeRequest(BaseModel):
@@ -62,7 +62,7 @@ class TradeRequest(BaseModel):
     agent_id: str = "default-trader"
     
     # ─── Image Input (Grok 4.2 Only) ───────────────────────────────────────────
-    # IMPORTANT: Image input is ONLY supported by Grok 4.20 0309 (v1 and v2).
+    # IMPORTANT: Image input is ONLY supported by Grok 4.3 (v1 and v2).
     # If you provide an image_url with other models (glm-5.1, mimo-v2-pro, qwen-3.6-plus),
     # the image will be IGNORED and only text will be processed.
     # 
@@ -70,7 +70,7 @@ class TradeRequest(BaseModel):
     # Image URL must be publicly accessible or base64 data URL.
     image_url: Optional[str] = Field(
         default=None,
-        description="URL of image to analyze. ONLY WORKS WITH Grok 4.20 0309 (v1 or v2). "
+        description="URL of image to analyze. ONLY WORKS WITH Grok 4.3 (v1 or v2). "
                     "Other models will IGNORE this field. "
                     "Supported: JPEG, PNG, GIF, WebP. Can be HTTP URL or base64 data URL."
     )
@@ -78,18 +78,18 @@ class TradeRequest(BaseModel):
     # ─── Single Model Selection ─────────────────────────────────────────────
     # User selects ONE model that is used by ALL agents.
     # This single model serves Planner, Verifier, Controller, Monitor, and Adjuster.
-    # Available models: glm-5.1, grok-4.20-0309 (v1), grok-4.20-0309-v2, mimo-v2-pro, qwen-3.6-plus
+    # Available models: glm-5.1, grok-4.3 (v1), grok-4.20-0309-v2, mimo-v2-pro, qwen-3.6-plus
     # Default: GLM-5.1 (good all-around for all agent roles)
     # Ollama is NOT available for live trading — only for backtesting.
     #
-    # IMAGE SUPPORT: Only grok-4.20-0309 and grok-4.20-0309-v2 support image input!
+    # IMAGE SUPPORT: Only grok-4.3 and grok-4.20-0309-v2 support image input!
     
     model: Optional[CloudLLMProvider] = Field(
         default=None,
         description="Single model used by ALL agents (Planner, Verifier, Controller, Monitor, Adjuster). "
-                    "Options: glm-5.1, grok-4.20-0309 (v1), grok-4.20-0309-v2, mimo-v2-pro, qwen-3.6-plus. "
+                    "Options: glm-5.1, grok-4.3 (v1), grok-4.20-0309-v2, mimo-v2-pro, qwen-3.6-plus. "
                     "Default: glm-5.1. "
-                    "NOTE: Only grok-4.20-0309 and grok-4.20-0309-v2 support image input!"
+                    "NOTE: Only grok-4.3 and grok-4.20-0309-v2 support image input!"
     )
     
     # ─── Legacy Fields (Backward Compatibility) ─────────────────────────────
@@ -111,20 +111,6 @@ class TradeRequest(BaseModel):
     request_timestamp: int = 0
     agent_signature: str = ""
     
-    # ─── Custom LLM Provider ─────────────────────────────────────────────────
-    custom_llm_provider: Optional[str] = Field(
-        default=None,
-        description="Custom LLM provider (e.g., 'openai', 'anthropic'). If set, overrides the default provider."
-    )
-    custom_llm_api_key: Optional[str] = Field(
-        default=None,
-        description="Custom API key for the LLM provider."
-    )
-    custom_llm_base_url: Optional[str] = Field(
-        default=None,
-        description="Custom base URL for the LLM provider API."
-    )
-
     def get_resolved_models(self) -> dict[str, str]:
         """
         Resolve model assignment for all agents.
@@ -241,24 +227,6 @@ class BacktestRequest(BaseModel):
     initial_capital: float = 10000.0
     chain: ChainType = ChainType.ETHEREUM
 
-    # ─── Custom LLM Provider for Backtesting ─────────────────────────────────
-    custom_llm_provider: Optional[str] = Field(
-        default=None,
-        description="Custom LLM provider (e.g., 'openai', 'anthropic'). If set, overrides the default backtest provider."
-    )
-    custom_llm_api_key: Optional[str] = Field(
-        default=None,
-        description="Custom API key for the LLM provider."
-    )
-    custom_llm_base_url: Optional[str] = Field(
-        default=None,
-        description="Custom base URL for the LLM provider API."
-    )
-    custom_llm_model: Optional[str] = Field(
-        default=None,
-        description="Custom model name for the LLM provider."
-    )
-
 
 class BacktestResult(BaseModel):
     strategy: str
@@ -286,6 +254,12 @@ class BacktestResult(BaseModel):
     x402_metadata: Optional[dict[str, Any]] = Field(
         default=None,
         description="x402 payment metadata — backtesting is ALWAYS exempt from x402 payments",
+    )
+    # Mock money simulation data — virtual crypto portfolio
+    mock_money: Optional[dict[str, Any]] = Field(
+        default=None,
+        description="Mock money simulation: virtual BTC/ETH/SOL/USDT balances, P&L, and fees. "
+                    "ALL VALUES ARE SIMULATED — NO REAL MONEY IS AT RISK.",
     )
 
 

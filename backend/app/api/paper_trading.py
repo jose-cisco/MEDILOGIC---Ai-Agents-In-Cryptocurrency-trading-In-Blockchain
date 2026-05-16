@@ -15,7 +15,7 @@ Key Differences:
 Use paper trading AFTER backtesting shows good results, BEFORE live trading.
 """
 from datetime import datetime
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request, Depends
 from pydantic import BaseModel, Field
 from typing import Optional
 import logging
@@ -25,6 +25,7 @@ from app.backtesting.paper_trading import (
     PaperTradingState,
     PaperOrderType,
 )
+from app.core.identity_verification import require_verified_identity
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +88,7 @@ class PaperOrderResponse(BaseModel):
 # ─── API Endpoints ─────────────────────────────────────────────────────────
 
 @router.post("/session/start")
-async def start_paper_session(request: PaperSessionStartRequest):
+async def start_paper_session(request: PaperSessionStartRequest, http_request: Request, _verified_email: str = Depends(require_verified_identity)):
     """
     Start a new paper trading session.
     
@@ -182,7 +183,7 @@ async def get_paper_session_status():
 
 
 @router.post("/order")
-async def submit_paper_order(request: PaperOrderRequest):
+async def submit_paper_order(request: PaperOrderRequest, http_request: Request, _verified_email: str = Depends(require_verified_identity)):
     """
     Submit a paper trading order.
     

@@ -115,7 +115,7 @@ export default function SecurityPage() {
       <div>
         <h1 className="text-2xl font-bold mb-1">Security & Vulnerability Scanner</h1>
         <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-          Ensemble LLM Analysis (GLM-5.1 + Grok 4.20) • FELLMVP Security Verification • 98.8% Accuracy
+          Ensemble LLM Analysis (GLM-5.1 + Grok 4.3) • FELLMVP Security Verification • 98.8% Accuracy
           {isSimulation && <span className="text-emerald-500 font-bold ml-2">(Simulation Mode - Free Local Models Only)</span>}
         </p>
       </div>
@@ -225,7 +225,7 @@ export default function SecurityPage() {
                       <div className="flex items-center gap-2">
                         <div className="flex gap-0.5">
                           <span title="GLM-5.1 Reasoning Verified" style={{ opacity: f.glm_verified ? 1 : 0.2 }}>🧠</span>
-                          <span title="Grok 4.20 Verified" style={{ opacity: f.grok_verified ? 1 : 0.2 }}>🛡️</span>
+                          <span title="Grok 4.3 Verified" style={{ opacity: f.grok_verified ? 1 : 0.2 }}>🛡️</span>
                         </div>
                         <span className="uppercase" style={{ color: SEVERITY_COLORS[f.severity] }}>{f.severity}</span>
                       </div>

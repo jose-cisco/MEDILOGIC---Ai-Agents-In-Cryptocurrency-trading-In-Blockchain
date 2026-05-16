@@ -9,7 +9,7 @@ import TradingViewWidget from '../components/TradingViewWidget'
 // Each model uses a specific provider with reasoning support where available
 // Cloud model options (MUST match backend CloudLLMProvider enum)
 // Supported cloud models for live/paper trading (via OpenRouter)
-// Grok 4.20 Beta Reasoning: https://docs.x.ai/developers/models/grok-4.20-beta-0309-reasoning
+// Grok 4.3 Reasoning: https://docs.x.ai/developers/models/grok-4.3-beta-reasoning
 const CLOUD_MODELS = [
   { 
     id: 'glm-5.1', 
@@ -26,8 +26,8 @@ const CLOUD_MODELS = [
     reasoning: true 
   },
   { 
-    id: 'grok-4.20', 
-    name: 'Grok 4.20 Beta Reasoning', 
+    id: 'grok-4.3', 
+    name: 'Grok 4.3 Reasoning', 
     provider: 'xAI', 
     desc: 'Enforced Reasoning: Security & Verification (March 2025)',
     reasoning: true 
@@ -536,7 +536,7 @@ export default function TradingDashboard() {
   const [predictionEndDate, setPredictionEndDate] = useState('')
   // Dual-model selection: user picks 2 cloud models, agents auto-assign
   const [model1, setModel1] = useState('glm-5.1')
-  const [model2, setModel2] = useState('grok-4.20')
+  const [model2, setModel2] = useState('grok-4.3')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState(null)
   const [ragMeta, setRagMeta] = useState(null)

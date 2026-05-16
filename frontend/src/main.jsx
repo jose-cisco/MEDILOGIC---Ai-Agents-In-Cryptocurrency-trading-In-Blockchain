@@ -6,19 +6,22 @@ import { ThemeProvider } from './contexts/ThemeContext'
 import { AppModeProvider } from './contexts/AppModeContext'
 import { WalletProvider } from './contexts/WalletContext'
 import { AuthProvider } from './contexts/AuthContext'
+import { DeviceProvider } from './contexts/DeviceContext'
 import './index.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ThemeProvider>
       <AppModeProvider>
-        <AuthProvider>
-          <WalletProvider>
-            <BrowserRouter>
-              <App />
-            </BrowserRouter>
-          </WalletProvider>
-        </AuthProvider>
+        <DeviceProvider>
+          <AuthProvider>
+            <WalletProvider>
+              <BrowserRouter>
+                <App />
+              </BrowserRouter>
+            </WalletProvider>
+          </AuthProvider>
+        </DeviceProvider>
       </AppModeProvider>
     </ThemeProvider>
   </React.StrictMode>,

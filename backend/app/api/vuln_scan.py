@@ -13,20 +13,20 @@ class ScanRequest(BaseModel):
     contract_source: str
     contract_name: str = "unknown"
     model_1: str = "glm-5.1"
-    model_2: str = "grok-4.20"
+    model_2: str = "grok-4.3"
 
 
 class AddressScanRequest(BaseModel):
     address: str
     chain: str = "ethereum"   # ethereum | bsc | polygon | arbitrum | base
     model_1: str = "glm-5.1"
-    model_2: str = "grok-4.20"
+    model_2: str = "grok-4.3"
 
 
 class BatchScanRequest(BaseModel):
     contracts: dict[str, str]  # name → source
     model_1: str = "glm-5.1"
-    model_2: str = "grok-4.20"
+    model_2: str = "grok-4.3"
 
 
 @router.post("/scan")
@@ -188,7 +188,7 @@ async def scan_batch(request: BatchScanRequest):
 
 
 @router.post("/scan/all-deployed")
-async def scan_all_deployed(model_1: str = "glm-5.1", model_2: str = "grok-4.20"):
+async def scan_all_deployed(model_1: str = "glm-5.1", model_2: str = "grok-4.3"):
     results = vulnerability_scanner.scan_all_deployed_contracts(model_1=model_1, model_2=model_2)
     summary = {}
     for name, result in results.items():

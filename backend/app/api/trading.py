@@ -24,6 +24,7 @@ from app.core.llm import (
     custom_llm_base_url,
     custom_llm_model,
 )
+from app.core.identity_verification import is_user_verified
 
 logger = logging.getLogger(__name__)
 
@@ -311,6 +312,27 @@ async def execute_trade(request: TradeRequest, http_request: Request):
     custom_llm_base_url.set(request.custom_llm_base_url)
 
     settings = get_settings()
+
+    # ── Identity Verification Gate ──────────────────────────────────────────
+    # Users MUST be verified via GitHub or LinkedIn before trading.
+    # This blocks hackers and threats from accessing the trading system.
+    # The user's email is extracted from the X-User-Email header (set by
+    # frontend after JWT authentication) or from the agent_id field.
+    if settings.IDENTITY_VERIFICATION_REQUIRED:
+        user_email = http_request.headers.get("X-User-Email", "").strip()
+        if not user_email:
+            user_email = request.agent_id  # fallback
+        if not user_email or not is_user_verified(user_email):
+            raise HTTPException(
+                status_code=403,
+                detail=(
+                    "TRADING BLOCKED: Identity verification required. "
+                    "Verify your identity via GitHub or LinkedIn before trading. "
+                    "This protects all users from hackers and malicious actors. "
+                    "Visit /api/v1/identity/requirements for verification details."
+                ),
+            )
+
     if settings.TRADING_MODE != "paper" and not settings.LIVE_TRADING_ENABLED:
         raise HTTPException(
             status_code=403,

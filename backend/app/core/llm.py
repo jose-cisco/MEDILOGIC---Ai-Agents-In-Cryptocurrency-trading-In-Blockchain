@@ -4,7 +4,7 @@ LLM Provider Routing — Direct Provider Connection
 Each model connects directly to its provider's API:
 
   • glm-5.1 → io.net (IONET_API_KEY)
-  • grok-4.20-0309 → x.ai v1 (XAI_API_KEY)
+  • grok-4.3 → x.ai v1 (XAI_API_KEY)
   • grok-4.20-0309-v2 → x.ai v2 (XAI_API_KEY)
   • mimo-v2-pro → Xiaomi (XIAOMI_API_KEY)
   • qwen-3.6-plus → Alibaba Cloud (ALIBABA_API_KEY)
@@ -41,31 +41,25 @@ logger = logging.getLogger(__name__)
 # This ensures that cloud LLMs are NEVER instantiated during backtests to avoid costs.
 is_backtest_mode: ContextVar[bool] = ContextVar("is_backtest_mode", default=False)
 
-# ─── Custom LLM Overrides ──────────────────────────────────────────────────
-# Users can provide their own LLM API keys and base URLs per request.
-custom_llm_provider: ContextVar[Optional[str]] = ContextVar("custom_llm_provider", default=None)
-custom_llm_api_key: ContextVar[Optional[str]] = ContextVar("custom_llm_api_key", default=None)
-custom_llm_base_url: ContextVar[Optional[str]] = ContextVar("custom_llm_base_url", default=None)
-custom_llm_model: ContextVar[Optional[str]] = ContextVar("custom_llm_model", default=None)
-
 
 # ─── Direct Provider Model Catalogue ─────────────────────────────────────────
 # Each model connects directly to its provider - no OpenRouter routing.
 # 
 # Provider → Model mapping:
 #   - io.net → GLM-5.1 (Reasoning) - TEXT ONLY
-#   - x.ai → Grok 4.20 0309 (Reasoning) v1 & v2 - TEXT + IMAGE INPUT
+#   - x.ai → Grok 4.3 (Reasoning) v1 & v2 - TEXT + IMAGE INPUT
 #   - Xiaomi → MiMo-V2-Pro (Reasoning) - TEXT ONLY
 #   - Alibaba Cloud → Qwen 3.6 Plus (Reasoning) - TEXT ONLY
 #
-# IMAGE INPUT: Only Grok 4.20 0309 (v1 and v2) support image input!
+# IMAGE INPUT: Only Grok 4.3 (v1 and v2) support image input!
 #
 DIRECT_PROVIDER_MODELS: dict[str, dict] = {
     "glm-5.1": {"provider": "ionet", "label": "GLM-5.1 (Reasoning)", "reasoning": True, "supports_image": False},
-    "grok-4.20-0309": {"provider": "xai", "label": "Grok 4.20 0309 (Reasoning) v1", "reasoning": True, "supports_image": True},
+    "grok-4.3": {"provider": "xai", "label": "Grok 4.3 (Reasoning) v1", "reasoning": True, "supports_image": True},
     "grok-4.20-0309-v2": {"provider": "xai", "label": "Grok 4.20 0309 (Reasoning) v2", "reasoning": True, "supports_image": True},
     "mimo-v2-pro": {"provider": "xiaomi", "label": "MiMo-V2-Pro (Reasoning)", "reasoning": True, "supports_image": False},
     "qwen-3.6-plus": {"provider": "alibaba", "label": "Qwen 3.6 Plus (Reasoning)", "reasoning": True, "supports_image": False},
+    "glm-5": {"provider": "modal", "label": "GLM-5 (Modal Serverless)", "reasoning": True, "supports_image": False},
 }
 
 
@@ -73,7 +67,7 @@ def model_supports_image(model_id: str) -> bool:
     """
     Check if a model supports image input.
     
-    IMPORTANT: ONLY Grok 4.20 0309 (v1 and v2) support image input.
+    IMPORTANT: ONLY Grok 4.3 (v1 and v2) support image input.
     All other models (glm-5.1, mimo-v2-pro, qwen-3.6-plus) are TEXT ONLY.
     
     Args:
@@ -120,7 +114,7 @@ def _get_xai_llm(
     frequency_penalty: float = 0.0,
     presence_penalty: float = 0.0,
 ) -> BaseChatModel:
-    """Grok 4.20 Reasoning via x.ai OpenAI-compatible endpoint."""
+    """Grok 4.3 Reasoning via x.ai OpenAI-compatible endpoint."""
     settings = get_settings()
     from langchain_openai import ChatOpenAI
     return ChatOpenAI(
@@ -224,6 +218,37 @@ def _get_backtest_ollama_llm(
     )
 
 
+def _get_modal_llm(
+    temperature: float = 0.15,
+    top_p: float = 0.90,
+    max_tokens: int = 4096,
+    frequency_penalty: float = 0.0,
+    presence_penalty: float = 0.0,
+) -> BaseChatModel:
+    """GLM-5 via Modal serverless endpoint (https://modal.com/glm-5-endpoint).
+    
+    Used for backtesting simulation when BACKTEST_USE_MODAL=True.
+    Modal provides GPU-accelerated inference for high-performance
+    backtesting of cryptocurrency trading strategies.
+    
+    Requires MODAL_API_KEY to be set in environment.
+    """
+    settings = get_settings()
+    from langchain_openai import ChatOpenAI
+    return ChatOpenAI(
+        base_url=settings.MODAL_BASE_URL,
+        api_key=settings.MODAL_API_KEY,
+        model=settings.MODAL_MODEL,
+        temperature=temperature,
+        model_kwargs={
+            "top_p": top_p,
+            "frequency_penalty": frequency_penalty,
+            "presence_penalty": presence_penalty,
+        },
+        max_tokens=max_tokens,
+    )
+
+
 # ─── Generic provider selector ─────────────────────────────────────────────────
 
 def get_llm(temperature: float = 0.1, provider: str | None = None) -> BaseChatModel:
@@ -237,6 +262,8 @@ def get_llm(temperature: float = 0.1, provider: str | None = None) -> BaseChatMo
         return _get_xiaomi_llm(temperature=temperature)
     if provider == "alibaba" and settings.ALIBABA_API_KEY:
         return _get_alibaba_llm(temperature=temperature)
+    if provider == "modal" and settings.MODAL_API_KEY:
+        return _get_modal_llm(temperature=temperature)
     return _get_ollama_llm(temperature=temperature)
 
 
@@ -306,32 +333,10 @@ def _get_cloud_llm(model_id: str, **kwargs) -> BaseChatModel:
     """
     Instantiate a cloud LLM by model identifier - direct provider connection.
 
-    model_id: "glm-5.1" | "grok-4.20-0309" | "grok-4.20-0309-v2" | "mimo-v2-pro" | "qwen-3.6-plus"
+    model_id: "glm-5.1" | "grok-4.3" | "grok-4.20-0309-v2" | "mimo-v2-pro" | "qwen-3.6-plus"
     kwargs: forwarded to the underlying factory (temperature, top_p, etc.)
     """
     settings = get_settings()
-
-    # ─── Custom LLM Override Logic ─────────────────────────────────────────
-    custom_provider = custom_llm_provider.get()
-    custom_key = custom_llm_api_key.get()
-    custom_url = custom_llm_base_url.get()
-    custom_mdl = custom_llm_model.get()
-
-    if custom_provider and custom_key:
-        from langchain_openai import ChatOpenAI
-        logger.info("Using custom LLM provider: %s", custom_provider)
-        return ChatOpenAI(
-            base_url=custom_url,  # Optional, can be None for native OpenAI/Anthropic etc. if using their SDKs, but ChatOpenAI uses it
-            api_key=custom_key,
-            model=custom_mdl or model_id,
-            temperature=kwargs.get("temperature", 0.1),
-            model_kwargs={
-                "top_p": kwargs.get("top_p", 0.92),
-                "frequency_penalty": kwargs.get("frequency_penalty", 0.0),
-                "presence_penalty": kwargs.get("presence_penalty", 0.0),
-            },
-            max_tokens=kwargs.get("max_tokens", 4096),
-        )
 
     # CRITICAL SAFETY: Never allow cloud models during backtests
     if is_backtest_mode.get():
@@ -348,19 +353,19 @@ def _get_cloud_llm(model_id: str, **kwargs) -> BaseChatModel:
             return _get_ionet_llm(**kwargs)
         raise RuntimeError("GLM-5.1 requires IONET_API_KEY.")
 
-    # Grok 4.20 0309 Reasoning v1 (x.ai direct)
-    if model_id == "grok-4.20-0309":
+    # Grok 4.3 Reasoning v1 (x.ai direct)
+    if model_id == "grok-4.3":
         if settings.XAI_API_KEY:
-            logger.info("Routing Grok 4.20 0309 v1 via x.ai (Direct) (Reasoning: ON)")
+            logger.info("Routing Grok 4.3 v1 via x.ai (Direct) (Reasoning: ON)")
             return _get_xai_llm(model_id=settings.XAI_MODEL_V1, **kwargs)
-        raise RuntimeError("Grok 4.20 0309 v1 requires XAI_API_KEY.")
+        raise RuntimeError("Grok 4.3 v1 requires XAI_API_KEY.")
 
-    # Grok 4.20 0309 Reasoning v2 (x.ai direct)
+    # Grok 4.3 Reasoning v2 (x.ai direct)
     if model_id == "grok-4.20-0309-v2":
         if settings.XAI_API_KEY:
-            logger.info("Routing Grok 4.20 0309 v2 via x.ai (Direct) (Reasoning: ON)")
+            logger.info("Routing Grok 4.3 v2 via x.ai (Direct) (Reasoning: ON)")
             return _get_xai_llm(model_id=settings.XAI_MODEL_V2, **kwargs)
-        raise RuntimeError("Grok 4.20 0309 v2 requires XAI_API_KEY.")
+        raise RuntimeError("Grok 4.3 v2 requires XAI_API_KEY.")
 
     # MiMo-V2-Pro (Xiaomi direct)
     if model_id == "mimo-v2-pro":
@@ -378,7 +383,7 @@ def _get_cloud_llm(model_id: str, **kwargs) -> BaseChatModel:
 
     raise ValueError(
         f"Unknown cloud model '{model_id}'. "
-        f"Valid options: 'glm-5.1' (io.net), 'grok-4.20-0309' (xAI v1), 'grok-4.20-0309-v2' (xAI v2), "
+        f"Valid options: 'glm-5.1' (io.net), 'grok-4.3' (xAI v1), 'grok-4.20-0309-v2' (xAI v2), "
         f"'mimo-v2-pro' (Xiaomi), 'qwen-3.6-plus' (Alibaba)."
     )
 
@@ -387,7 +392,7 @@ def _get_cloud_llm(model_id: str, **kwargs) -> BaseChatModel:
 
 def resolve_agent_models(
     planner_model: str = "glm-5.1",
-    verifier_model: str = "grok-4.20-0309",
+    verifier_model: str = "grok-4.3",
     controller_model: str = "glm-5.1",
     monitor_model: str = "glm-5.1",
     adjuster_model: str = "glm-5.1",
@@ -404,7 +409,7 @@ def resolve_agent_models(
     
     Args:
         planner_model: Model for Planner agent (default: glm-5.1)
-        verifier_model: Model for Verifier agent (default: grok-4.20-0309)
+        verifier_model: Model for Verifier agent (default: grok-4.3)
         controller_model: Model for Controller agent (default: glm-5.1)
         monitor_model: Model for Monitor agent (default: glm-5.1)
         adjuster_model: Model for Adjuster agent (default: glm-5.1)
@@ -513,7 +518,7 @@ def get_planner_llm(model_id: str = "glm-5.1", **overrides) -> BaseChatModel:
     )
 
 
-def get_verifier_llm(model_id: str = "grok-4.20-0309", **overrides) -> BaseChatModel:
+def get_verifier_llm(model_id: str = "grok-4.3", **overrides) -> BaseChatModel:
     """
     Verifier LLM — auto-assigned from user's model selection.
     """
@@ -575,7 +580,12 @@ def get_controller_llm(model_id: str = "glm-5.1", **overrides) -> BaseChatModel:
 
 def get_backtest_llm(**overrides) -> BaseChatModel:
     """
-    Backtest LLM — always uses Ollama route (cloud/local).
+    Backtest LLM — uses Modal (GLM-5) if configured, otherwise Ollama.
+    
+    Modal endpoint: https://modal.com/glm-5-endpoint
+    When BACKTEST_USE_MODAL=True and MODAL_API_KEY is set, routes through
+    Modal's serverless GPU infrastructure for high-performance backtesting.
+    Otherwise falls back to Ollama (cloud/local).
     
     Optimal: temperature=0.15, top_p=0.90, max_tokens=4096
     Rationale: Backtesting needs slight creativity to simulate diverse
@@ -583,29 +593,19 @@ def get_backtest_llm(**overrides) -> BaseChatModel:
     to avoid hallucinating unrealistic trades. Higher max_tokens for
     generating full arrays of trade decisions.
     """
+    settings = get_settings()
     params = _backtest_params()
     params.update(overrides)
-
-    # ─── Custom LLM Override for Backtesting ──────────────────────────────
-    custom_provider = custom_llm_provider.get()
-    custom_key = custom_llm_api_key.get()
-    custom_url = custom_llm_base_url.get()
-    custom_mdl = custom_llm_model.get()
-
-    if custom_provider and custom_key:
-        from langchain_openai import ChatOpenAI
-        logger.info("Using custom LLM provider for BACKTEST: %s", custom_provider)
-        return ChatOpenAI(
-            base_url=custom_url,
-            api_key=custom_key,
-            model=custom_mdl or "gpt-4o", # Default for custom if not specified
+    
+    # Use Modal GLM-5 endpoint if configured
+    if settings.BACKTEST_USE_MODAL and settings.MODAL_API_KEY:
+        logger.info("Backtest → Modal GLM-5 (https://modal.com/glm-5-endpoint)")
+        return _get_modal_llm(
             temperature=params.get("temperature", 0.15),
-            model_kwargs={
-                "top_p": params.get("top_p", 0.90),
-            },
+            top_p=params.get("top_p", 0.90),
             max_tokens=params.get("num_predict", 4096),
         )
-
+    
     return _get_backtest_ollama_llm(**params)
 
 
@@ -673,7 +673,7 @@ def get_auto_tuned_planner_llm(
 
 
 def get_auto_tuned_verifier_llm(
-    model_id: str = "grok-4.20-0309",
+    model_id: str = "grok-4.3",
     input_text: str = "",
     market_data: Optional[dict] = None,
     is_live: bool = False,

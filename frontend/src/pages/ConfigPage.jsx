@@ -27,7 +27,7 @@ export default function ConfigPage() {
       setAiModels([
         { name: 'GLM 5.1 Reasoning', id: 'glm-5.1', enabled: true, icon: '🧠', provider: 'Ollama', price: 'Zero-Cost Local' },
         { name: 'GLM 5 Reasoning', id: 'glm-5', enabled: true, icon: '🧠', provider: 'Ollama', price: 'Zero-Cost Local' },
-        { name: 'Grok 4.20 Multi-Agent', id: 'grok-4.20', enabled: true, icon: '🛡️', provider: 'Ollama', price: 'Zero-Cost Local' },
+        { name: 'Grok 4.3 Multi-Agent', id: 'grok-4.3', enabled: true, icon: '🛡️', provider: 'Ollama', price: 'Zero-Cost Local' },
         { name: 'MiniMax M2.7', id: 'minimax-m2.7', enabled: true, icon: '🪐', provider: 'Ollama', price: 'Zero-Cost Local' },
         { name: 'DeepSeek R1', id: 'deepseek-r1', enabled: true, icon: '🔵', provider: 'Ollama', price: 'Zero-Cost Local' },
         { name: 'Llama 3 (70B)', id: 'llama-3', enabled: true, icon: '🦙', provider: 'Ollama', price: 'Zero-Cost Local' },

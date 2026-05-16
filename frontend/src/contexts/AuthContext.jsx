@@ -5,6 +5,7 @@
  * Supports email authentication with Gmail, Hotmail, etc.
  */
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { useDevice } from './DeviceContext';
 
 const API_BASE = '/api/v1';
 const AUTH_TOKEN_KEY = 'auth_token';
@@ -18,6 +19,7 @@ export function AuthProvider({ children }) {
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { registerDevice, getDeviceHeaders } = useDevice();
 
   // Load token from localStorage on mount
   useEffect(() => {
@@ -64,10 +66,14 @@ export function AuthProvider({ children }) {
       // Store token and user data
       localStorage.setItem(AUTH_TOKEN_KEY, data.access_token);
       localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+      if (data.user?.email) localStorage.setItem('user_email', data.user.email);
       
       setToken(data.access_token);
       setUser(data.user);
       setLoading(false);
+
+      // Register device with backend for ban tracking
+      registerDevice();
 
       return { success: true, user: data.user, two_factor_enabled: data.user?.two_factor_enabled };
     } catch (err) {
@@ -104,10 +110,14 @@ export function AuthProvider({ children }) {
       // Store token and user data
       localStorage.setItem(AUTH_TOKEN_KEY, data.access_token);
       localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+      localStorage.setItem('user_email', email);
       
       setToken(data.access_token);
       setUser(data.user);
       setLoading(false);
+
+      // Register device with backend for ban tracking
+      registerDevice();
 
       return { success: true, user: data.user };
     } catch (err) {
@@ -115,7 +125,7 @@ export function AuthProvider({ children }) {
       setLoading(false);
       return { success: false, error: err.message };
     }
-  }, []);
+  }, [registerDevice]);
 
   // Verify 2FA code
   const verify2FA = useCallback(async (email, code) => {
@@ -138,10 +148,14 @@ export function AuthProvider({ children }) {
       // Store token and user data
       localStorage.setItem(AUTH_TOKEN_KEY, data.access_token);
       localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+      if (data.user?.email) localStorage.setItem('user_email', data.user.email);
       
       setToken(data.access_token);
       setUser(data.user);
       setLoading(false);
+
+      // Register device with backend for ban tracking
+      registerDevice();
 
       return { success: true, user: data.user };
     } catch (err) {
@@ -149,7 +163,7 @@ export function AuthProvider({ children }) {
       setLoading(false);
       return { success: false, error: err.message };
     }
-  }, []);
+  }, [registerDevice]);
 
   // Setup 2FA for existing account
   const setup2FA = useCallback(async (phoneNumber) => {
@@ -198,6 +212,7 @@ export function AuthProvider({ children }) {
     // Clear local state
     localStorage.removeItem(AUTH_TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
+    localStorage.removeItem('user_email');
     setToken(null);
     setUser(null);
   }, [token]);

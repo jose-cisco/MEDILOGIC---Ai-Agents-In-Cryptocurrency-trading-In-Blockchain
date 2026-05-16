@@ -59,7 +59,7 @@ async def get_blockchain_status():
 async def get_system_info():
     settings = get_settings()
     llm_label = (
-        f"Trading Circle: grok-4.20, glm-5.1, glm-5, minimax-m2.7; "
+        f"Trading Circle: grok-4.3, glm-5.1, glm-5, minimax-m2.7; "
         f"Backtest Circle: glm-5.1, glm-5, minimax-m2.7 (Ollama fallback)"
     )
 
@@ -134,10 +134,10 @@ async def get_llm_providers():
             "recommended_roles": ["planner", "controller"],
         },
         {
-            "id": "grok-4.20",
-            "name": "Grok 4.20 Reasoning",
+            "id": "grok-4.3",
+            "name": "Grok 4.3 Reasoning",
             "provider": "OpenRouter",
-            "description": "Grok 4.20 Multi-Agent Reasoning — Security & Verification",
+            "description": "Grok 4.3 Multi-Agent Reasoning — Security & Verification",
             "available": bool(settings.OPENROUTER_API_KEY),
             "recommended_roles": ["verifier"],
         },
@@ -153,7 +153,7 @@ async def get_llm_providers():
     
     # Show example auto-assignments for each combination
     assignments = {}
-    circle_models = ["glm-5.1", "glm-5", "grok-4.20", "minimax-m2.7"]
+    circle_models = ["glm-5.1", "glm-5", "grok-4.3", "minimax-m2.7"]
     for m1_id in circle_models:
         for m2_id in circle_models:
             assignment = resolve_agent_models(m1_id, m2_id)

@@ -12,23 +12,46 @@ class Settings(BaseSettings):
     BACKTEST_FORCE_OLLAMA_CLOUD: bool = True
     BACKTEST_DATASET_PATH: str = "./data/backtest_dataset.jsonl"
 
+    # ── Modal — GLM-5 Endpoint (Backtesting Simulation) ──────────────────────
+    # Modal serverless endpoint for GLM-5 backtesting simulation.
+    # URL: https://modal.com/glm-5-endpoint
+    # Used for: backtesting crypto trading strategies with simulated mock money.
+    # When MODAL_API_KEY is set, backtesting will route through Modal's
+    # serverless infrastructure for high-performance GPU inference.
+    MODAL_API_KEY: str = ""
+    MODAL_BASE_URL: str = "https://modal.com/glm-5-endpoint"
+    MODAL_MODEL: str = "glm-5"
+    # When True, backtesting uses Modal endpoint instead of local Ollama.
+    BACKTEST_USE_MODAL: bool = False
+    # ── Mock Money Simulation (Backtesting) ──────────────────────────────────
+    # Simulated cryptocurrency balances for backtesting with mock money.
+    # These define the virtual portfolio used in backtesting simulations.
+    MOCK_MONEY_INITIAL_USD: float = 100000.0  # $100K default mock USD
+    MOCK_MONEY_INITIAL_BTC: float = 0.5       # 0.5 BTC default mock
+    MOCK_MONEY_INITIAL_ETH: float = 5.0        # 5 ETH default mock
+    MOCK_MONEY_INITIAL_SOL: float = 50.0       # 50 SOL default mock
+    # Fees and slippage are DISABLED — backtesting uses pure simulation with zero costs.
+    # These settings are kept for backward compatibility but are not used.
+    MOCK_MONEY_FEE_PCT: float = 0.0            # Always 0 — no fees in simulation
+    MOCK_MONEY_SLIPPAGE_PCT: float = 0.0        # Always 0 — no slippage in simulation
+
     # ── io.net — GLM-5.1 Reasoning (Planner / Controller) ──────────────────
     IONET_API_KEY: str = ""
     IONET_BASE_URL: str = "https://api.intelligence.io.solutions/api/v1"
     # Correct model slug on io.net for GLM-5.1 Reasoning
     IONET_MODEL: str = "THUDM/GLM-Z1-32B-0414"
 
-    # ── x.ai — Grok 4.20 Reasoning (Verifier) ──────────────────────────────
+    # ── x.ai — Grok 4.3 Reasoning (Verifier) ──────────────────────────────
     XAI_API_KEY: str = ""
     XAI_BASE_URL: str = "https://api.x.ai/v1"
-    # Grok 4.20 Beta Reasoning model (March 2025 release)
-    # Docs: https://docs.x.ai/developers/models/grok-4.20-beta-0309-reasoning
+    # Grok 4.3 Beta Reasoning model (March 2025 release)
+    # Docs: https://docs.x.ai/developers/models/grok-4.3-beta-reasoning
     # Available variants:
-    #   - grok-4.20-beta-0309-reasoning (v1 - specific version)
+    #   - grok-4.3-beta-reasoning (v1 - specific version)
     #   - grok-4.20-0309-v2-reasoning (v2 reasoning variant, enhanced)
-    #   - grok-4.20-reasoning-latest (always updated)
-    #   - grok-4.20-beta-latest-reasoning (latest beta with reasoning)
-    XAI_MODEL_V1: str = "grok-4.20-beta-0309-reasoning"  # v1
+    #   - grok-4.3-reasoning-latest (always updated)
+    #   - grok-4.3-beta-latest-reasoning (latest beta with reasoning)
+    XAI_MODEL_V1: str = "grok-4.3-beta-reasoning"  # v1
     XAI_MODEL_V2: str = "grok-4.20-0309-v2-reasoning"   # v2 (default)
     XAI_MODEL: str = "grok-4.20-0309-v2-reasoning"      # Default to v2
 
@@ -49,16 +72,16 @@ class Settings(BaseSettings):
     # Provider routing via OpenRouter:
     #   - glm-5.1 → io.net (reasoning ON)
     #   - glm-5 → DeepInfra (reasoning ON)
-    #   - grok-4.20 → xAI (reasoning ON)
+    #   - grok-4.3 → xAI (reasoning ON)
     #   - minimax-m2.7 → Together (reasoning OFF)
     # 
-    # Grok 4.20 model IDs (xAI via OpenRouter):
-    #   - x-ai/grok-4.20-beta-0309-reasoning (specific version, March 2025)
-    #   - x-ai/grok-4.20-reasoning-latest (always updated)
-    # Docs: https://docs.x.ai/developers/models/grok-4.20-beta-0309-reasoning
+    # Grok 4.3 model IDs (xAI via OpenRouter):
+    #   - x-ai/grok-4.3-beta-reasoning (specific version, March 2025)
+    #   - x-ai/grok-4.3-reasoning-latest (always updated)
+    # Docs: https://docs.x.ai/developers/models/grok-4.3-beta-reasoning
     GLM_5_1_MODEL: str = "z-ai/glm-5.1"
     GLM_5_MODEL: str = "z-ai/glm-5"
-    GROK_4_20_MA_MODEL: str = "x-ai/grok-4.20-beta-0309-reasoning"
+    GROK_4_20_MA_MODEL: str = "x-ai/grok-4.3-beta-reasoning"
     MINIMAX_M2_7_MODEL: str = "minimax/minimax-m2.7"
 
     # ── Claw402 — x402-native multi-model provider ──────────────────────────
@@ -86,7 +109,7 @@ class Settings(BaseSettings):
     PLANNER_FREQUENCY_PENALTY: float = 0.0
     PLANNER_PRESENCE_PENALTY: float = 0.0
 
-    # Verifier (Grok 4.20): must be deterministic for security checks
+    # Verifier (Grok 4.3): must be deterministic for security checks
     VERIFIER_TEMPERATURE: float = 0.0
     VERIFIER_TOP_P: float = 0.85
     VERIFIER_MAX_TOKENS: int = 2048
@@ -205,7 +228,49 @@ class Settings(BaseSettings):
     JWT_EXPIRATION_HOURS: int = 24
     CORS_ORIGINS: str = ""  # comma-separated allowed origins (empty = allow all)
     ALLOWED_HOSTS: str = ""  # comma-separated allowed hosts for TrustedHostMiddleware
-    
+
+    # ── Identity Verification (LinkedIn / GitHub) ────────────────────────────
+    # Users must verify identity via LinkedIn or GitHub before trading.
+    # This cuts hackers and threats out of the system.
+    IDENTITY_VERIFICATION_REQUIRED: bool = True  # Require verification to trade
+    GITHUB_CLIENT_ID: str = ""  # GitHub OAuth App Client ID
+    GITHUB_CLIENT_SECRET: str = ""  # GitHub OAuth App Client Secret
+    LINKEDIN_CLIENT_ID: str = ""  # LinkedIn OAuth Client ID
+    LINKEDIN_CLIENT_SECRET: str = ""  # LinkedIn OAuth Client Secret
+    # Minimum account age (days) required for GitHub/LinkedIn verification
+    # Prevents freshly-created accounts from passing verification
+    # Must be 1+ year old (365 days) to block newly-created threat accounts
+    IDENTITY_MIN_ACCOUNT_AGE_DAYS: int = 365
+
+    # ── Creator / Admin Whitelist ─────────────────────────────────────────────
+    # These emails bypass identity verification — they are the system creators.
+    # Comma-separated list of email addresses.
+    IDENTITY_CREATOR_EMAILS: str = "pitiparkjriahirankit@gmail.com"
+    # Minimum GitHub public repos or LinkedIn connections to pass verification
+    IDENTITY_MIN_GITHUB_REPOS: int = 3
+    IDENTITY_MIN_LINKEDIN_CONNECTIONS: int = 10
+
+    # ── AWS DynamoDB — Cloud Identity Store (Serverless, Strongest Security) ────
+    # DynamoDB stores verified user identity records with KMS encryption at rest.
+    # This is the primary persistent store for real trading — the in-memory
+    # _verification_db is the local fallback/cache when DynamoDB is unavailable.
+    # AWS KMS (Customer Managed Key) provides encryption at rest & in transit.
+    # Point-in-time recovery (PITR) protects against accidental data loss.
+    # IAM policies enforce least-privilege access to the identity table.
+    DYNAMODB_ENABLED: bool = False  # Enable DynamoDB cloud storage (requires AWS credentials)
+    DYNAMODB_TABLE_NAME: str = "ai-trading-identity-verification"  # DynamoDB table name
+    DYNAMODB_REGION: str = "us-east-1"  # AWS region for DynamoDB
+    # AWS credentials — use IAM roles in production (EC2/ECS/Lambda), keys for dev
+    AWS_ACCESS_KEY_ID: str = ""  # Leave empty to use IAM role / ~/.aws/credentials
+    AWS_SECRET_ACCESS_KEY: str = ""  # Leave empty to use IAM role / ~/.aws/credentials
+    # KMS Customer Managed Key for encryption at rest (strongest security)
+    # If empty, AWS-owned key is used (still encrypted, but not customer-controlled)
+    DYNAMODB_KMS_KEY_ID: str = ""  # KMS Key ID or ARN for server-side encryption
+    # Point-in-time recovery — protects against accidental deletes
+    DYNAMODB_PITR_ENABLED: bool = True
+    # TTL: auto-expire unverified records after 30 days (verified records never expire)
+    DYNAMODB_TTL_DAYS_UNVERIFIED: int = 30
+
     # ── Rate Limiting ─────────────────────────────────────────────────────────
     RATE_LIMIT_LOGIN_ATTEMPTS: int = 5  # Max failed login attempts before lockout
     RATE_LIMIT_LOCKOUT_MINUTES: int = 15  # Lockout duration in minutes
@@ -283,7 +348,7 @@ class Settings(BaseSettings):
             if not self.IONET_API_KEY and not self.XAI_API_KEY:
                 raise ValueError(
                     "TRADING_MODE=live requires at least one cloud API key "
-                    "(IONET_API_KEY for GLM-5.1 and/or XAI_API_KEY for Grok 4.20). "
+                    "(IONET_API_KEY for GLM-5.1 and/or XAI_API_KEY for Grok 4.3). "
                     "Ollama is not available for live trading — only for backtesting."
                 )
             if not self.LIVE_GUARD_SECRET:

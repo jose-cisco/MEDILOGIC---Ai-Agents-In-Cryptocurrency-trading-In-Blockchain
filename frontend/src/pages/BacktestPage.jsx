@@ -382,6 +382,87 @@ export default function BacktestPage() {
                 </div>
               </div>
 
+              {/* Mock Money Simulation */}
+              {result.mock_money && (
+                <div className="card">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold">Mock Money Simulation</h3>
+                    <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(251,191,36,0.15)', color: '#fbbf24' }}>
+                      SIMULATED
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                    {[
+                      { label: 'USDT Balance', value: `$${(result.mock_money.balances?.usdt ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, icon: '💵' },
+                      { label: 'BTC Balance', value: `₿ ${(result.mock_money.balances?.btc ?? 0).toFixed(6)}`, icon: '₿' },
+                      { label: 'ETH Balance', value: `Ξ ${(result.mock_money.balances?.eth ?? 0).toFixed(4)}`, icon: 'Ξ' },
+                      { label: 'SOL Balance', value: `◎ ${(result.mock_money.balances?.sol ?? 0).toFixed(2)}`, icon: '◎' },
+                    ].map((b, i) => (
+                      <div key={i} className="text-center p-3 rounded-lg" style={{ background: 'var(--bg-secondary)' }}>
+                        <div className="text-lg mb-1">{b.icon}</div>
+                        <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>{b.label}</div>
+                        <div className="text-sm font-bold mt-1">{b.value}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                    <div>
+                      <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>Total Portfolio Value</div>
+                      <div className="text-lg font-bold">${(result.mock_money.total_value_usd ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>P&L</div>
+                      <div className={`text-lg font-bold ${(result.mock_money.pnl_usd ?? 0) >= 0 ? 'metric-positive' : 'metric-negative'}`}>
+                        {(result.mock_money.pnl_usd ?? 0) >= 0 ? '+' : ''}${(result.mock_money.pnl_usd ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>P&L %</div>
+                      <div className={`text-lg font-bold ${(result.mock_money.pnl_pct ?? 0) >= 0 ? 'metric-positive' : 'metric-negative'}`}>
+                        {(result.mock_money.pnl_pct ?? 0) >= 0 ? '+' : ''}{(result.mock_money.pnl_pct ?? 0).toFixed(2)}%
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>Total Fees Paid</div>
+                      <div className="text-lg font-bold" style={{ color: '#f87171' }}>
+                        -${(result.mock_money.total_fees_usd ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </div>
+                    </div>
+                  </div>
+                  {result.mock_money.trades && result.mock_money.trades.length > 0 && (
+                    <div className="overflow-x-auto max-h-48 overflow-y-auto">
+                      <table className="w-full text-xs">
+                        <thead className="sticky top-0" style={{ background: 'var(--bg-card)' }}>
+                          <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                            <th className="text-left pb-2 font-medium" style={{ color: 'var(--text-secondary)' }}>#</th>
+                            <th className="text-left pb-2 font-medium" style={{ color: 'var(--text-secondary)' }}>Side</th>
+                            <th className="text-left pb-2 font-medium" style={{ color: 'var(--text-secondary)' }}>Symbol</th>
+                            <th className="text-left pb-2 font-medium" style={{ color: 'var(--text-secondary)' }}>Qty</th>
+                            <th className="text-left pb-2 font-medium" style={{ color: 'var(--text-secondary)' }}>Price</th>
+                            <th className="text-left pb-2 font-medium" style={{ color: 'var(--text-secondary)' }}>Fee</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {result.mock_money.trades.map((t, i) => (
+                            <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
+                              <td className="py-1">{i + 1}</td>
+                              <td className={t.side === 'buy' ? 'metric-positive' : 'metric-negative'}>{(t.side ?? '').toUpperCase()}</td>
+                              <td>{t.symbol}</td>
+                              <td>{t.quantity?.toFixed(6)}</td>
+                              <td>${t.price?.toFixed(2)}</td>
+                              <td style={{ color: '#f87171' }}>${t.fee_usd?.toFixed(2)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                  <div className="mt-3 p-2 rounded text-xs text-center" style={{ background: 'rgba(251,191,36,0.1)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.2)' }}>
+                    ⚠️ ALL BALANCES ARE SIMULATED — No real funds are used in this backtest. Mock money is for educational purposes only.
+                  </div>
+                </div>
+              )}
+
               {portfolioData.length > 0 && (
                 <div className="card">
                   <h3 className="font-semibold mb-4">Portfolio Value Over Time</h3>

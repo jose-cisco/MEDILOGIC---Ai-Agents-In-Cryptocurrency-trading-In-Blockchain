@@ -1,8 +1,9 @@
 """DEX Executor API — On-chain trade execution on Ethereum/Solana DeFi."""
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request, Depends
 from pydantic import BaseModel
 from typing import Optional
 from app.blockchain.dex_executor import dex_executor, DEXPlatform, DEXTradeParams
+from app.core.identity_verification import require_verified_identity
 
 router = APIRouter()
 
@@ -44,7 +45,7 @@ async def get_ethereum_quote(
 
 
 @router.post("/swap/ethereum")
-async def execute_ethereum_swap(request: SwapRequest):
+async def execute_ethereum_swap(request: SwapRequest, http_request: Request, _verified_email: str = Depends(require_verified_identity)):
     if not request.private_key:
         raise HTTPException(status_code=400, detail="private_key required for Ethereum swaps")
     params = DEXTradeParams(
@@ -76,7 +77,7 @@ async def execute_ethereum_swap(request: SwapRequest):
 
 
 @router.post("/swap/solana")
-async def execute_solana_swap(request: SwapRequest):
+async def execute_solana_swap(request: SwapRequest, http_request: Request, _verified_email: str = Depends(require_verified_identity)):
     params = DEXTradeParams(
         token_in=request.token_in,
         token_out=request.token_out,

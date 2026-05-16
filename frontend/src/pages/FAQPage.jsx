@@ -44,7 +44,7 @@ const getFaqItems = (isSimulation) => [
       </div>
     ) : (
       <div className="space-y-3">
-        <p><strong>Yes.</strong> Live trading requires real capital and relies on premium cloud LLMs (Grok 4.20, GLM-5.1).</p>
+        <p><strong>Yes.</strong> Live trading requires real capital and relies on premium cloud LLMs (Grok 4.3, GLM-5.1).</p>
         <p>Your wallet is fully responsible for x402 API payments ($0.005 USDC per request) as well as the actual on-chain gas fees for trade execution on standard DEXes and chains.</p>
       </div>
     )

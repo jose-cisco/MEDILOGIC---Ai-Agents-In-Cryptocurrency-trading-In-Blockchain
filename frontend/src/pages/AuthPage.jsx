@@ -5,9 +5,9 @@
  * Supports email authentication (Gmail, Hotmail, etc.)
  * Includes 2FA verification via SMS.
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Mail, Lock, User, Eye, EyeOff, ArrowRight, CheckCircle, AlertCircle, Send, Smartphone, Shield } from 'lucide-react';
+import { Mail, Lock, User, Eye, EyeOff, ArrowRight, CheckCircle, AlertCircle, Send, Smartphone, Shield, Github, Linkedin, AlertTriangle } from 'lucide-react';
 
 export default function AuthPage({ onSuccess }) {
   const {
@@ -21,7 +21,7 @@ export default function AuthPage({ onSuccess }) {
     clearError,
   } = useAuth();
 
-  // View state: 'login' | 'signup' | 'forgot-password' | 'verify-pending' | '2fa-verify'
+  // View state: 'login' | 'signup' | 'forgot-password' | 'verify-pending' | '2fa-verify' | 'identity-verify'
   const [view, setView] = useState('login');
 
   // Form state
@@ -36,6 +36,11 @@ export default function AuthPage({ onSuccess }) {
   // 2FA state
   const [twoFactorCode, setTwoFactorCode] = useState('');
   const [pending2FAEmail, setPending2FAEmail] = useState('');
+
+  // Identity verification state
+  const [verificationStatus, setVerificationStatus] = useState(null);
+  const [verificationLoading, setVerificationLoading] = useState(false);
+  const [verificationError, setVerificationError] = useState('');
 
   // Validation state
   const [validationErrors, setValidationErrors] = useState({});
@@ -140,6 +145,74 @@ export default function AuthPage({ onSuccess }) {
     }
   };
 
+  // Check identity verification status
+  const checkVerificationStatus = async (userEmail) => {
+    setVerificationLoading(true);
+    setVerificationError('');
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`/api/v1/identity/status?email=${encodeURIComponent(userEmail)}`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setVerificationStatus(data);
+        if (data.verified && data.can_trade) {
+          setSuccessMessage('Identity verified! You can now trade.');
+        }
+      } else {
+        setVerificationError(data.detail || 'Failed to check verification status');
+      }
+    } catch (err) {
+      setVerificationError('Network error checking verification status');
+    }
+    setVerificationLoading(false);
+  };
+
+  // Handle GitHub verification
+  const handleGithubVerify = async () => {
+    setVerificationLoading(true);
+    setVerificationError('');
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch('/api/v1/identity/github/auth-url', {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (response.ok && data.url) {
+        // Redirect to GitHub OAuth
+        window.location.href = data.url;
+      } else {
+        setVerificationError(data.detail || 'GitHub verification not available');
+      }
+    } catch (err) {
+      setVerificationError('Network error connecting to GitHub');
+    }
+    setVerificationLoading(false);
+  };
+
+  // Handle LinkedIn verification
+  const handleLinkedinVerify = async () => {
+    setVerificationLoading(true);
+    setVerificationError('');
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch('/api/v1/identity/linkedin/auth-url', {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (response.ok && data.url) {
+        // Redirect to LinkedIn OAuth
+        window.location.href = data.url;
+      } else {
+        setVerificationError(data.detail || 'LinkedIn verification not available');
+      }
+    } catch (err) {
+      setVerificationError('Network error connecting to LinkedIn');
+    }
+    setVerificationLoading(false);
+  };
+
   // Get password strength color
   const getPasswordStrength = () => {
     const passed = passwordRequirements.filter((r) => r.test(password)).length;
@@ -165,6 +238,7 @@ export default function AuthPage({ onSuccess }) {
             {view === 'forgot-password' && 'Reset your password'}
             {view === 'verify-pending' && 'Verify your email'}
             {view === '2fa-verify' && 'Two-Factor Authentication'}
+            {view === 'identity-verify' && 'Verify Your Identity'}
           </p>
         </div>
 
@@ -256,6 +330,200 @@ export default function AuthPage({ onSuccess }) {
                   Back to login
                 </button>
               </form>
+            </div>
+          ) : view === 'identity-verify' ? (
+            // Identity Verification View
+            <div className="py-4">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-amber-500/20 flex items-center justify-center">
+                <Shield className="w-8 h-8 text-amber-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-white text-center mb-2">Verify Your Identity</h3>
+              <p className="text-gray-400 text-sm text-center mb-6">
+                Identity verification is required to trade. This protects all users from hackers and malicious actors.
+              </p>
+
+              {/* Verification Status */}
+              {verificationStatus && verificationStatus.verified && (
+                <div className="mb-4 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0" />
+                    <div>
+                      <p className="text-green-400 text-sm font-medium">Identity Verified!</p>
+                      {/* Identity derived exclusively from GitHub + LinkedIn — no custom aliases */}
+                      <div className="mt-1 space-y-0.5">
+                        {verificationStatus.github_username && (
+                          <p className="text-green-400/70 text-xs flex items-center gap-1">
+                            <span className="text-gray-400">GitHub:</span>
+                            <span className="font-medium">@{verificationStatus.github_username}</span>
+                            {verificationStatus.github_display_name && (
+                              <span className="text-green-400/50">({verificationStatus.github_display_name})</span>
+                            )}
+                          </p>
+                        )}
+                        {verificationStatus.linkedin_username && (
+                          <p className="text-green-400/70 text-xs flex items-center gap-1">
+                            <span className="text-gray-400">LinkedIn:</span>
+                            <span className="font-medium">{verificationStatus.linkedin_display_name || verificationStatus.linkedin_username}</span>
+                          </p>
+                        )}
+                        {!verificationStatus.github_username && !verificationStatus.linkedin_username && (
+                          <p className="text-green-400/70 text-xs">via {verificationStatus.provider} ({verificationStatus.provider_username})</p>
+                        )}
+                      </div>
+                      {verificationStatus.display_name && verificationStatus.dual_verified && (
+                        <p className="text-amber-300/60 text-xs mt-1 italic">
+                          Combined identity: {verificationStatus.display_name}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  {/* Crypto Experience Priority */}
+                  {verificationStatus.crypto_priority && (
+                    <div className="mt-2 pt-2 border-t border-green-500/20">
+                      <div className="flex items-center gap-2 mb-1">
+                        {verificationStatus.crypto_priority === 'veteran' && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                            ⭐ Priority 1 — Veteran
+                          </span>
+                        )}
+                        {verificationStatus.crypto_priority === 'experienced' && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                            🏅 Priority 2 — Experienced
+                          </span>
+                        )}
+                        {verificationStatus.crypto_priority === 'rookie' && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-green-500/20 text-green-300 border border-green-500/30">
+                            🌱 Priority 3 — Rookie
+                          </span>
+                        )}
+                        {verificationStatus.crypto_priority === 'no_experience' && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-red-500/20 text-red-300 border border-red-500/30">
+                            🚫 Blocked — No Crypto Experience
+                          </span>
+                        )}
+                        {verificationStatus.dual_verified && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                            🔗 Dual Verified
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-green-400/60 text-xs">
+                        Estimated crypto experience: {verificationStatus.crypto_estimated_years || 0} years
+                        {verificationStatus.crypto_can_trade ? ' — You can trade!' : ' — Insufficient for trading (min 2 years)'}
+                      </p>
+                      {verificationStatus.crypto_signals && verificationStatus.crypto_signals.length > 0 && (
+                        <div className="mt-1">
+                          {verificationStatus.crypto_signals.slice(0, 3).map((signal, i) => (
+                            <p key={i} className="text-green-400/50 text-xs">• {signal}</p>
+                          ))}
+                          {verificationStatus.crypto_signals.length > 3 && (
+                            <p className="text-green-400/40 text-xs">...and {verificationStatus.crypto_signals.length - 3} more signals</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {verificationError && (
+                <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
+                  <p className="text-red-400 text-sm">{verificationError}</p>
+                </div>
+              )}
+
+              {/* Warning Box */}
+              <div className="mb-6 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-amber-400 text-sm font-medium">Trading Requires Verification + Crypto Experience</p>
+                    <p className="text-amber-400/70 text-xs mt-1">
+                      You must verify your identity AND demonstrate crypto experience to trade.
+                      Identity verification blocks hackers and scammers. Crypto experience ensures
+                      you understand the risks. Verify through the providers below — connecting BOTH
+                      GitHub and LinkedIn gives bonus scoring.
+                    </p>
+                    <div className="mt-2 space-y-1">
+                      <p className="text-amber-400/60 text-xs">⭐ Priority 1 — Veteran: 5+ years crypto experience</p>
+                      <p className="text-amber-400/60 text-xs">🏅 Priority 2 — Experienced: 3-5 years crypto experience</p>
+                      <p className="text-amber-400/60 text-xs">🌱 Priority 3 — Rookie: 2-3 years crypto experience</p>
+                      <p className="text-red-400/60 text-xs">🚫 Blocked: Less than 2 years or no crypto experience</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* GitHub Verification Button */}
+              <button
+                onClick={handleGithubVerify}
+                disabled={verificationLoading}
+                className="w-full mb-3 py-3 rounded-lg font-medium flex items-center justify-center gap-3 transition-colors"
+                style={{
+                  background: verificationLoading ? 'var(--gray-600)' : '#24292e',
+                  color: 'white',
+                  border: '1px solid #444',
+                }}
+              >
+                <Github className="w-5 h-5" />
+                {verificationLoading ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  'Verify with GitHub'
+                )}
+              </button>
+              <p className="text-gray-500 text-xs text-center mb-4">
+                Requires a GitHub account that is at least 1 year old with 3+ public repositories.
+              </p>
+
+              {/* LinkedIn Verification Button */}
+              <button
+                onClick={handleLinkedinVerify}
+                disabled={verificationLoading}
+                className="w-full mb-3 py-3 rounded-lg font-medium flex items-center justify-center gap-3 transition-colors"
+                style={{
+                  background: verificationLoading ? 'var(--gray-600)' : '#0077B5',
+                  color: 'white',
+                }}
+              >
+                <Linkedin className="w-5 h-5" />
+                {verificationLoading ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  'Verify with LinkedIn'
+                )}
+              </button>
+              <p className="text-gray-500 text-xs text-center mb-4">
+                Requires a LinkedIn profile with verified email and professional identity.
+              </p>
+
+              {/* Check Status Button */}
+              <button
+                onClick={() => checkVerificationStatus(email)}
+                disabled={verificationLoading}
+                className="w-full py-2.5 rounded-lg text-sm font-medium transition-colors"
+                style={{
+                  background: 'transparent',
+                  color: 'var(--accent-blue)',
+                  border: '1px solid var(--accent-blue)',
+                }}
+              >
+                {verificationLoading ? 'Checking...' : 'Check Verification Status'}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setView('login');
+                  setVerificationError('');
+                  clearError();
+                  setSuccessMessage('');
+                }}
+                className="w-full text-gray-400 hover:text-white text-sm mt-4"
+              >
+                Back to login
+              </button>
             </div>
           ) : view === 'verify-pending' ? (
             // Verify Pending View
@@ -453,17 +721,32 @@ export default function AuthPage({ onSuccess }) {
 
               {/* Forgot Password Link (login only) */}
               {view === 'login' && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setView('forgot-password');
-                    clearError();
-                    setSuccessMessage('');
-                  }}
-                  className="text-sm text-blue-400 hover:text-blue-300"
-                >
-                  Forgot password?
-                </button>
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setView('forgot-password');
+                      clearError();
+                      setSuccessMessage('');
+                    }}
+                    className="text-sm text-blue-400 hover:text-blue-300"
+                  >
+                    Forgot password?
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setView('identity-verify');
+                      setVerificationError('');
+                      clearError();
+                      setSuccessMessage('');
+                    }}
+                    className="text-sm text-amber-400 hover:text-amber-300 flex items-center gap-1"
+                  >
+                    <Shield className="w-3.5 h-3.5" />
+                    Verify Identity
+                  </button>
+                </div>
               )}
 
               {/* Submit Button */}

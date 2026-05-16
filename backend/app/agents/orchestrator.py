@@ -25,7 +25,7 @@ class TradingOrchestrator:
     def _build_initial_state(
         self, prompt: str, token_pair: str, chain: str, market_data: dict,
         model_1: str = "glm-5.1",
-        model_2: str = "grok-4.20",
+        model_2: str = "grok-4.3",
         prediction_start_date: str | None = None,
         prediction_end_date: str | None = None,
         risk_assessment: dict | None = None,
@@ -88,7 +88,7 @@ class TradingOrchestrator:
     async def run(
         self, prompt: str, token_pair: str, chain: str, market_data: dict,
         model_1: str = "glm-5.1",
-        model_2: str = "grok-4.20",
+        model_2: str = "grok-4.3",
         prediction_start_date: str | None = None,
         prediction_end_date: str | None = None,
         risk_assessment: dict | None = None,
@@ -106,7 +106,7 @@ class TradingOrchestrator:
     def run_sync(
         self, prompt: str, token_pair: str, chain: str, market_data: dict,
         model_1: str = "glm-5.1",
-        model_2: str = "grok-4.20",
+        model_2: str = "grok-4.3",
         prediction_start_date: str | None = None,
         prediction_end_date: str | None = None,
         risk_assessment: dict | None = None,

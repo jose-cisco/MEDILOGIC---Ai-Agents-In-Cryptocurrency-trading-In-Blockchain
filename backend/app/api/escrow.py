@@ -11,7 +11,7 @@ Financial Flow:
 4. Owner withdraws profits via /escrow/withdraw endpoint
 5. x402 payments collected separately (see payments.py)
 """
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Depends
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
@@ -19,6 +19,7 @@ import logging
 
 from app.core.config import get_settings
 from app.core.auth import require_auth
+from app.core.identity_verification import require_verified_identity
 
 logger = logging.getLogger(__name__)
 
@@ -208,7 +209,8 @@ async def get_escrow_summary(request: Request):
 @router.post("/deposit")
 async def deposit_to_escrow(
     deposit_request: DepositRequest,
-    request: Request
+    request: Request,
+    _verified_email: str = Depends(require_verified_identity),
 ):
     """
     Deposit trading capital to escrow.
@@ -247,7 +249,8 @@ async def deposit_to_escrow(
 @router.post("/withdraw")
 async def withdraw_profits(
     withdraw_request: WithdrawRequest,
-    request: Request
+    request: Request,
+    _verified_email: str = Depends(require_verified_identity),
 ):
     """
     Withdraw profits from escrow to owner wallet.
@@ -297,7 +300,7 @@ async def withdraw_profits(
 
 
 @router.post("/withdraw-all")
-async def withdraw_all_profits(request: Request):
+async def withdraw_all_profits(request: Request, _verified_email: str = Depends(require_verified_identity)):
     """
     Withdraw all withdrawable profits to owner wallet.
     """
@@ -514,7 +517,8 @@ async def record_trade_execution(
     amount_in: float,
     amount_out: float,
     is_profit: bool,
-    request: Request
+    request: Request,
+    _verified_email: str = Depends(require_verified_identity),
 ):
     """
     Record a trade execution (internal, called by trading agent).
