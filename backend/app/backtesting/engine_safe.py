@@ -253,6 +253,9 @@ class BacktestEngine:
         start_date: str,
         end_date: str,
         initial_capital: float,
+        backtest_model: str = "",
+        backtest_api_key: str = "",
+        backtest_base_url: str = "",
     ) -> tuple[list, list[dict], str]:
         rows, data_source = self.fetch_historical_data(token_pair, start_date, end_date)
         preview = rows[-120:]
@@ -263,7 +266,11 @@ class BacktestEngine:
             for r in preview
         )
         rag_context, rag_metadata = self._get_rag_context_for_backtest(token_pair, strategy)
-        llm = get_backtest_llm()
+        llm = get_backtest_llm(
+            backtest_model=backtest_model,
+            backtest_api_key=backtest_api_key,
+            backtest_base_url=backtest_base_url,
+        )
         prompt = BACKTEST_PROMPT.format(
             strategy=strategy,
             token_pair=token_pair,
@@ -318,11 +325,17 @@ class BacktestEngine:
         end_date: str,
         initial_capital: float,
         use_llm: bool = True,
+        backtest_model: str = "",
+        backtest_api_key: str = "",
+        backtest_base_url: str = "",
     ) -> BacktestMetrics:
         rag_metadata = {}
         if use_llm:
             decisions, rows, data_source, rag_metadata = self.generate_llm_decisions(
-                strategy, token_pair, start_date, end_date, initial_capital
+                strategy, token_pair, start_date, end_date, initial_capital,
+                backtest_model=backtest_model,
+                backtest_api_key=backtest_api_key,
+                backtest_base_url=backtest_base_url,
             )
         else:
             rows, data_source = self.fetch_historical_data(token_pair, start_date, end_date)

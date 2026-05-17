@@ -67,17 +67,25 @@ export default function KnowledgePage() {
     setIngesting(false)
   }
 
-  // ── File upload ────────────────────────────────────────────────────────────
+  // ── File upload (1–10 files) ────────────────────────────────────────────────
+  const MAX_FILES = 10
+
   const handleFileDrop = (e) => {
     e.preventDefault()
     setDragOver(false)
     const files = Array.from(e.dataTransfer.files).filter(f => /\.(pdf|txt)$/i.test(f.name))
-    setSelectedFiles(prev => [...prev, ...files])
+    setSelectedFiles(prev => {
+      const combined = [...prev, ...files]
+      return combined.slice(0, MAX_FILES) // Enforce max 10
+    })
   }
 
   const handleFileSelect = (e) => {
     const files = Array.from(e.target.files)
-    setSelectedFiles(prev => [...prev, ...files])
+    setSelectedFiles(prev => {
+      const combined = [...prev, ...files]
+      return combined.slice(0, MAX_FILES) // Enforce max 10
+    })
   }
 
   const removeFile = (idx) => setSelectedFiles(prev => prev.filter((_, i) => i !== idx))
@@ -104,12 +112,15 @@ export default function KnowledgePage() {
     setUploading(false)
   }
 
-  // ── URL scraper ───────────────────────────────────────────────────────────
+  // ── URL scraper (1–10 URLs) ───────────────────────────────────────────────
+  const MAX_URLS = 10
+
   const handleScrape = async () => {
     const urls = websiteUrls
       .split('\n')
       .map((url) => url.trim())
       .filter(Boolean)
+      .slice(0, MAX_URLS) // Enforce max 10
 
     if (!urls.length || !scrapeTask.trim()) return
 
@@ -234,7 +245,8 @@ export default function KnowledgePage() {
           {activeIngestTab === TAB_FILE && (
             <div className="space-y-4">
               <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                Upload <strong>PDF</strong> or <strong>TXT</strong> files. Text is extracted, chunked and embedded automatically. Drop multiple files at once.
+                Upload <strong>1–10 PDF or TXT files</strong>. Text is extracted, chunked and embedded automatically. Drop multiple files at once.
+                {selectedFiles.length >= MAX_FILES && <span style={{ color: '#f87171', fontWeight: 600 }}> (Maximum {MAX_FILES} files reached)</span>}
               </p>
 
               {/* Source label */}
@@ -303,11 +315,13 @@ export default function KnowledgePage() {
           {activeIngestTab === TAB_URL && (
             <div className="space-y-4">
               <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                Add one or more website URLs and tell the autonomous scraper what news to extract. The backend will fetch the pages, let the AI structure relevant stories, and store the resulting news documents in ChromaDB.
+                Add <strong>1–10 website URLs</strong> (one per line) and tell the autonomous scraper what news to extract. The backend will fetch the pages, let the AI structure relevant stories, and store the resulting news documents in ChromaDB.
               </p>
 
               <div>
-                <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--text-secondary)' }}>Website URL(s)</label>
+                <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--text-secondary)' }}>
+                  Website URL(s) — {websiteUrls.split('\n').filter(l => l.trim()).length}/{MAX_URLS}
+                </label>
                 <textarea
                   rows={4}
                   value={websiteUrls}

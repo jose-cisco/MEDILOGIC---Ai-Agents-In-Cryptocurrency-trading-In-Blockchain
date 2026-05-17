@@ -406,10 +406,13 @@ function CodeBlock({ children }) {
   )
 }
 
+// Provider metadata — MUST match backend CloudLLMProvider providers
 const PROVIDER_META = {
-  deepseek:  { label: 'DeepSeek',  icon: '🔵', color: '#4f8ef7' },
-  xai:       { label: 'xAI',       icon: '⚫', color: '#9ca3af' },
-  minimax:   { label: 'MiniMax',   icon: '🪐', color: '#ff4d4f' },
+  ionet:     { label: 'io.net',       icon: '🧠', color: '#3b82f6' },
+  xai:       { label: 'xAI',          icon: '⚫', color: '#9ca3af' },
+  xiaomi:    { label: 'Xiaomi',       icon: '🪐', color: '#ff6b35' },
+  alibaba:   { label: 'Alibaba Cloud',icon: '🔵', color: '#4f8ef7' },
+  modal:     { label: 'Modal',        icon: '⚡', color: '#8b5cf6' },
 }
 
 function OpenRouterPanel() {

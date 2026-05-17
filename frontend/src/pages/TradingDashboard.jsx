@@ -4,42 +4,58 @@ import { useTheme } from '../contexts/ThemeContext'
 import { useAppMode } from '../contexts/AppModeContext'
 import TradingViewWidget from '../components/TradingViewWidget'
 
-// ── Cloud model options (MUST match backend CloudLLMProvider enum) ──────────
-// Supported cloud models for live/paper trading (via OpenRouter)
-// Each model uses a specific provider with reasoning support where available
-// Cloud model options (MUST match backend CloudLLMProvider enum)
-// Supported cloud models for live/paper trading (via OpenRouter)
-// Grok 4.3 Reasoning: https://docs.x.ai/developers/models/grok-4.3-beta-reasoning
+// ── Cloud model options (MUST match backend CloudLLMProvider enum exactly) ──────
+// Source: backend/app/schemas/models.py CloudLLMProvider + backend/app/core/llm.py DIRECT_PROVIDER_MODELS
+// 5 live trading models — each connects directly to its provider (no OpenRouter)
+// Image input: ONLY grok-4.3 and grok-4.20-0309-v2 support image input
 const CLOUD_MODELS = [
-  { 
-    id: 'glm-5.1', 
-    name: 'GLM-5.1 Reasoning', 
-    provider: 'io.net', 
-    desc: 'Enforced Reasoning: Planning & Analysis',
-    reasoning: true 
+  {
+    id: 'glm-5.1',
+    name: 'GLM-5.1 Reasoning',
+    provider: 'io.net',
+    desc: 'Reasoning — Planning & Analysis (TEXT ONLY)',
+    reasoning: true,
+    supportsImage: false,
   },
-  { 
-    id: 'glm-5', 
-    name: 'GLM-5 Reasoning', 
-    provider: 'DeepInfra', 
-    desc: 'Enforced Reasoning: Alternative Planning',
-    reasoning: true 
+  {
+    id: 'grok-4.3',
+    name: 'Grok 4.3 Reasoning v1',
+    provider: 'xAI',
+    desc: 'Reasoning v1 — Security & Verification (TEXT + IMAGE)',
+    reasoning: true,
+    supportsImage: true,
   },
-  { 
-    id: 'grok-4.3', 
-    name: 'Grok 4.3 Reasoning', 
-    provider: 'xAI', 
-    desc: 'Enforced Reasoning: Security & Verification (March 2025)',
-    reasoning: true 
+  {
+    id: 'grok-4.20-0309-v2',
+    name: 'Grok 4.20 0309 Reasoning v2',
+    provider: 'xAI',
+    desc: 'Reasoning v2 — Enhanced Verification (TEXT + IMAGE)',
+    reasoning: true,
+    supportsImage: true,
   },
-  { 
-    id: 'minimax-m2.7', 
-    name: 'MiniMax M2.7', 
-    provider: 'Together', 
-    desc: 'High Capacity: Multi-Task Processing',
-    reasoning: false 
+  {
+    id: 'mimo-v2-pro',
+    name: 'MiMo-V2-Pro Reasoning',
+    provider: 'Xiaomi',
+    desc: 'Reasoning — Efficient Analysis (TEXT ONLY)',
+    reasoning: true,
+    supportsImage: false,
+  },
+  {
+    id: 'qwen-3.6-plus',
+    name: 'Qwen 3.6 Plus Reasoning',
+    provider: 'Alibaba Cloud',
+    desc: 'Reasoning — Deep Analysis (TEXT ONLY)',
+    reasoning: true,
+    supportsImage: false,
   },
 ]
+
+// Mask API key for display: show only last 4 chars as ****abcd
+function maskApiKey(key) {
+  if (!key || key.length <= 4) return key ? '****' : ''
+  return '****' + key.slice(-4)
+}
 
 // ── Chain options (MUST match backend ChainType enum) ──────────
 // Only ethereum and solana are supported by the backend schema
@@ -48,14 +64,8 @@ const CHAIN_OPTIONS = [
   { id: 'solana', name: 'Solana', icon: '◎' },
 ]
 
-// Auto-assignment logic (mirrors backend resolve_agent_models)
-function getAutoAssignment(model1, model2) {
-  return {
-    planner: model1,
-    verifier: model2,
-    controller: model1,
-  }
-}
+// All agents use the same model (mirrors backend TradeRequest.model → single model for all agents)
+// No auto-assignment needed — single model selection
 
 function AgentTracePanel({ agentTrace }) {
   const [open, setOpen] = useState(false)
@@ -534,9 +544,11 @@ export default function TradingDashboard() {
   const [chain, setChain] = useState('ethereum')
   const [predictionStartDate, setPredictionStartDate] = useState('')
   const [predictionEndDate, setPredictionEndDate] = useState('')
-  // Dual-model selection: user picks 2 cloud models, agents auto-assign
-  const [model1, setModel1] = useState('glm-5.1')
-  const [model2, setModel2] = useState('grok-4.3')
+  // Single model selection: all agents use the same model (matches backend TradeRequest.model)
+  const [selectedModel, setSelectedModel] = useState('glm-5.1')
+  // Custom LLM override fields (match backend TradeRequest custom_llm_* fields)
+  const [customApiKey, setCustomApiKey] = useState('')
+  const [customBaseUrl, setCustomBaseUrl] = useState('')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState(null)
   const [ragMeta, setRagMeta] = useState(null)
@@ -545,8 +557,7 @@ export default function TradingDashboard() {
   const [signing, setSigning] = useState(false)
   const [paymentTx, setPaymentTx] = useState('')
 
-  const assignment = getAutoAssignment(model1, model2)
-  const isSingleModel = model1 === model2
+  const selectedModelInfo = CLOUD_MODELS.find(o => o.id === selectedModel)
 
 
   const executeTrade = async (existingTx = null) => {
@@ -568,8 +579,9 @@ export default function TradingDashboard() {
           prediction_end_date: predictionEndDate || undefined,
           max_position_usd: 1000,
           agent_id: 'default-trader',
-          model_1: model1,
-          model_2: model2,
+          model: selectedModel,
+          custom_llm_api_key: customApiKey || undefined,
+          custom_llm_base_url: customBaseUrl || undefined,
         }),
       })
 
@@ -730,110 +742,127 @@ export default function TradingDashboard() {
             </div>
           </div>
 
-          {/* Dual-Model Selection */}
+          {/* Single Model Selection — all agents use the same model */}
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <label
                 className="text-xs font-medium"
                 style={{ color: 'var(--text-secondary)' }}
               >
-                Cloud Model Selection
+                Cloud Model (All Agents)
               </label>
-              {isSingleModel && (
+              {selectedModelInfo?.supportsImage && (
                 <span
                   className="text-xs px-2 py-0.5 rounded"
                   style={{ background: 'rgba(16,185,129,0.15)', color: 'var(--accent-green)', fontWeight: 600 }}
                 >
-                  💰 Cost Optimized (1 API key)
+                  🖼️ Image Input Supported
                 </span>
               )}
             </div>
             <div className="p-3 rounded-lg" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
-              <div className="grid grid-cols-2 gap-4 mb-3">
-                <div>
-                  <label
-                    className="text-xs font-medium mb-1 block"
-                    style={{ color: 'var(--accent-blue)' }}
-                  >
-                    🧠 Model 1 (Planner + Controller)
-                  </label>
-                  <select
-                    value={model1}
-                    onChange={(e) => setModel1(e.target.value)}
-                    className="w-full"
-                    style={{ fontSize: 12 }}
-                  >
-                    {CLOUD_MODELS.map((opt) => (
-                      <option key={opt.id} value={opt.id}>
-                        {opt.name} ({opt.provider})
-                      </option>
-                    ))}
-                  </select>
-                  <div className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
-                    {CLOUD_MODELS.find((o) => o.id === model1)?.desc}
-                  </div>
-                </div>
-                <div>
-                  <label
-                    className="text-xs font-medium mb-1 block"
-                    style={{ color: 'var(--accent-yellow)' }}
-                  >
-                    🛡️ Model 2 (Verifier)
-                  </label>
-                  <select
-                    value={model2}
-                    onChange={(e) => setModel2(e.target.value)}
-                    className="w-full"
-                    style={{ fontSize: 12 }}
-                  >
-                    {CLOUD_MODELS.map((opt) => (
-                      <option key={opt.id} value={opt.id}>
-                        {opt.name} ({opt.provider})
-                      </option>
-                    ))}
-                  </select>
-                  <div className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
-                    {CLOUD_MODELS.find((o) => o.id === model2)?.desc}
-                  </div>
+              <div>
+                <label
+                  className="text-xs font-medium mb-1 block"
+                  style={{ color: 'var(--accent-blue)' }}
+                >
+                  🧠 Model (Planner + Verifier + Controller)
+                </label>
+                <select
+                  value={selectedModel}
+                  onChange={(e) => setSelectedModel(e.target.value)}
+                  className="w-full"
+                  style={{ fontSize: 12 }}
+                >
+                  {CLOUD_MODELS.map((opt) => (
+                    <option key={opt.id} value={opt.id}>
+                      {opt.name} ({opt.provider})
+                    </option>
+                  ))}
+                </select>
+                <div className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
+                  {selectedModelInfo?.desc}
                 </div>
               </div>
 
-              {/* Auto-assignment preview */}
+              {/* Agent assignment preview */}
               <div
-                className="p-2 rounded text-xs"
+                className="p-2 rounded text-xs mt-3"
                 style={{ background: 'var(--bg-primary)', border: '1px solid var(--border)' }}
               >
                 <div className="font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
-                  Auto-Assignment Preview
+                  Agent Assignment
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <span
                     className="px-2 py-0.5 rounded"
                     style={{ background: 'rgba(59,130,246,0.15)', color: 'var(--accent-blue)', fontWeight: 600 }}
                   >
-                    🧠 Planner → {CLOUD_MODELS.find(o => o.id === assignment.planner)?.name || assignment.planner}
+                    🧠 Planner → {selectedModelInfo?.name || selectedModel}
                   </span>
                   <span
                     className="px-2 py-0.5 rounded"
                     style={{ background: 'rgba(234,179,8,0.15)', color: 'var(--accent-yellow)', fontWeight: 600 }}
                   >
-                    🛡️ Verifier → {CLOUD_MODELS.find(o => o.id === assignment.verifier)?.name || assignment.verifier}
+                    🛡️ Verifier → {selectedModelInfo?.name || selectedModel}
                   </span>
                   <span
                     className="px-2 py-0.5 rounded"
                     style={{ background: 'rgba(168,85,247,0.15)', color: 'var(--accent-purple)', fontWeight: 600 }}
                   >
-                    ⚖️ Controller → {CLOUD_MODELS.find(o => o.id === assignment.controller)?.name || assignment.controller}
+                    ⚖️ Controller → {selectedModelInfo?.name || selectedModel}
                   </span>
                 </div>
                 <div className="mt-1" style={{ color: 'var(--text-secondary)' }}>
-                  {isSingleModel
-                    ? '💰 Single model mode — only 1 API key billed (lowest cost)'
-                    : '🔀 Dual model mode — 2 API keys (diverse verification for security)'}
+                  💰 Single model — 1 API key ({selectedModelInfo?.provider}) for all agents
                 </div>
               </div>
             </div>
 
+          </div>
+
+          {/* Custom LLM Provider Override (matches backend custom_llm_* fields) */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <label
+                className="text-xs font-medium"
+                style={{ color: 'var(--text-secondary)' }}
+              >
+                API Key Override (Optional)
+              </label>
+              {customApiKey && (
+                <span className="text-xs px-2 py-0.5 rounded" style={{ background: 'rgba(139,92,246,0.1)', color: '#8b5cf6', fontWeight: 600 }}>
+                  🔑 {maskApiKey(customApiKey)}
+                </span>
+              )}
+            </div>
+            <input
+              type="password"
+              value={customApiKey}
+              onChange={(e) => setCustomApiKey(e.target.value)}
+              placeholder={`Override ${selectedModelInfo?.provider || 'provider'} API key (uses server default if empty)`}
+              className="w-full"
+              style={{ fontSize: 12 }}
+            />
+            <div>
+              <label
+                className="text-xs font-medium mb-1 block"
+                style={{ color: 'var(--text-secondary)' }}
+              >
+                Base URL Override (Optional)
+              </label>
+              <input
+                type="url"
+                value={customBaseUrl}
+                onChange={(e) => setCustomBaseUrl(e.target.value)}
+                placeholder={`Override ${selectedModelInfo?.provider || 'provider'} base URL (uses server default if empty)`}
+                className="w-full"
+                style={{ fontSize: 12 }}
+              />
+            </div>
+            <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+              Leave empty to use server-configured {selectedModelInfo?.provider} API key and endpoint.
+            </div>
           </div>
 
           <div>
@@ -857,8 +886,8 @@ export default function TradingDashboard() {
             className="btn-primary w-full"
           >
             {loading
-              ? `🔄 Agents Processing (${CLOUD_MODELS.find(o => o.id === model1)?.name} + ${CLOUD_MODELS.find(o => o.id === model2)?.name})...`
-              : '🚀 Execute via Dual-Model Multi-Agent'}
+              ? `🔄 Agents Processing (${selectedModelInfo?.name || selectedModel})...`
+              : '🚀 Execute Trade'}
           </button>
         </div>
 
@@ -1004,7 +1033,7 @@ export default function TradingDashboard() {
             <div>🔒 Security: Ensemble LLM (98.8% FELLMVP)</div>
             <div>📊 RAG: 93-95% accuracy (Karim et al. 2025)</div>
             <div>💰 x402: Pay-per-use (USDC on Base) — Backtest exempt</div>
-            <div>🦙 Ollama: Backtesting only (not for trading)</div>
+            <div>⚡ Modal GLM-5: Backtesting only (not for live trading)</div>
           </div>
         </div>
 
@@ -1056,7 +1085,7 @@ export default function TradingDashboard() {
                   fontWeight: 600,
                 }}
               >
-                {CLOUD_MODELS.find(o => o.id === assignment.planner)?.name || assignment.planner} Planner ✓
+                {selectedModelInfo?.name || selectedModel} Planner ✓
               </span>
               <span
                 style={{
@@ -1069,7 +1098,7 @@ export default function TradingDashboard() {
                   fontWeight: 600,
                 }}
               >
-                {CLOUD_MODELS.find(o => o.id === assignment.verifier)?.name || assignment.verifier} Verifier ✓
+                {selectedModelInfo?.name || selectedModel} Verifier ✓
               </span>
               <span
                 style={{
@@ -1082,7 +1111,7 @@ export default function TradingDashboard() {
                   fontWeight: 600,
                 }}
               >
-                {CLOUD_MODELS.find(o => o.id === assignment.controller)?.name || assignment.controller} Controller ✓
+                {selectedModelInfo?.name || selectedModel} Controller ✓
               </span>
             </div>
           </div>

@@ -105,6 +105,22 @@ class TradeRequest(BaseModel):
         description="Legacy: Ignored. Use 'model' for single model selection."
     )
     
+    # ─── Custom LLM Provider Override ────────────────────────────────────────
+    # Allows per-request override of LLM provider, API key, base URL, and model.
+    # If set, these take priority over the server-wide configuration.
+    custom_llm_provider: Optional[str] = Field(
+        default=None,
+        description="Override LLM provider for this request (e.g., 'openai', 'anthropic')."
+    )
+    custom_llm_api_key: Optional[str] = Field(
+        default=None,
+        description="Override API key for the custom LLM provider."
+    )
+    custom_llm_base_url: Optional[str] = Field(
+        default=None,
+        description="Override base URL for the custom LLM provider."
+    )
+    
     # ─── Agent Governance & DID ───────────────────────────────────────────────
     did: str = ""
     request_nonce: str = ""
@@ -226,6 +242,21 @@ class BacktestRequest(BaseModel):
     end_date: str
     initial_capital: float = 10000.0
     chain: ChainType = ChainType.ETHEREUM
+    # ─── Backtest LLM Configuration (Modal GLM-5) ────────────────────────────
+    # Per-request override for backtesting LLM provider.
+    # Defaults to Modal GLM-5 endpoint (https://modal.com/glm-5-endpoint).
+    backtest_model: Optional[str] = Field(
+        default="glm-5",
+        description="Backtest model: glm-5 (Modal) or glm-5.1 (Modal). Default: glm-5",
+    )
+    backtest_api_key: Optional[str] = Field(
+        default=None,
+        description="API key for the backtest LLM endpoint. If not provided, uses server MODAL_API_KEY.",
+    )
+    backtest_base_url: Optional[str] = Field(
+        default=None,
+        description="Base URL for the backtest LLM endpoint. If not provided, uses server MODAL_BASE_URL.",
+    )
 
 
 class BacktestResult(BaseModel):

@@ -12,7 +12,7 @@ from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
-BACKTEST_PROMPT = """You are an expert crypto trading strategy backtester AI (Ollama/Modal backtesting engine).
+BACKTEST_PROMPT = """You are an expert crypto trading strategy backtester AI (Modal GLM-5 backtesting engine).
 Given historical market data and relevant RAG knowledge, simulate trading decisions as if you were operating in real-time.
 
 For each data point, return a JSON array of trade decisions:
@@ -191,6 +191,9 @@ class BacktestEngine:
         start_date: str,
         end_date: str,
         initial_capital: float,
+        backtest_model: str = "",
+        backtest_api_key: str = "",
+        backtest_base_url: str = "",
     ) -> list:
         df = self.fetch_historical_data(token_pair, start_date, end_date)
         market_data_str = df[
@@ -214,8 +217,12 @@ class BacktestEngine:
         # Get mock money simulation settings
         settings = get_settings()
 
-        # Use dedicated backtest LLM route with optimal tuning
-        llm = get_backtest_llm()
+        # Use dedicated backtest LLM route with optimal tuning (Modal GLM-5 by default)
+        llm = get_backtest_llm(
+            backtest_model=backtest_model,
+            backtest_api_key=backtest_api_key,
+            backtest_base_url=backtest_base_url,
+        )
         prompt = BACKTEST_PROMPT.format(
             strategy=strategy,
             token_pair=token_pair,
@@ -234,7 +241,7 @@ class BacktestEngine:
         response = llm.invoke(
             [
                 SystemMessage(
-                    content="You are a crypto backtesting engine (Ollama). Return valid JSON only."
+                    content="You are a crypto backtesting engine (Modal GLM-5). Return valid JSON only."
                 ),
                 HumanMessage(content=prompt),
             ]
@@ -287,11 +294,17 @@ class BacktestEngine:
         end_date: str,
         initial_capital: float,
         use_llm: bool = True,
+        backtest_model: str = "",
+        backtest_api_key: str = "",
+        backtest_base_url: str = "",
     ) -> BacktestMetrics:
         rag_metadata = {}
         if use_llm:
             decisions, df, rag_metadata = self.generate_llm_decisions(
-                strategy, token_pair, start_date, end_date, initial_capital
+                strategy, token_pair, start_date, end_date, initial_capital,
+                backtest_model=backtest_model,
+                backtest_api_key=backtest_api_key,
+                backtest_base_url=backtest_base_url,
             )
         else:
             df = self.fetch_historical_data(token_pair, start_date, end_date)

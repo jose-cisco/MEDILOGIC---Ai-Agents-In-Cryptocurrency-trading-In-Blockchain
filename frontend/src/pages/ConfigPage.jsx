@@ -21,39 +21,23 @@ export default function ConfigPage() {
   const [aiModels, setAiModels] = useState([])
   const exchanges = isSimulation ? SIMULATION_EXCHANGES : LIVE_EXCHANGES
 
+  // Models MUST match backend CloudLLMProvider enum exactly:
+  // glm-5.1 (io.net), grok-4.3 (xAI), grok-4.20-0309-v2 (xAI),
+  // mimo-v2-pro (Xiaomi), qwen-3.6-plus (Alibaba Cloud)
+  const CLOUD_MODELS = [
+    { name: 'GLM-5.1 Reasoning', id: 'glm-5.1', enabled: true, icon: '🧠', provider: 'io.net', price: 'Direct Provider', supportsImage: false },
+    { name: 'Grok 4.3 Reasoning v1', id: 'grok-4.3', enabled: true, icon: '🛡️', provider: 'xAI', price: 'Direct Provider', supportsImage: true },
+    { name: 'Grok 4.20 0309 v2', id: 'grok-4.20-0309-v2', enabled: true, icon: '🛡️', provider: 'xAI', price: 'Direct Provider', supportsImage: true },
+    { name: 'MiMo-V2-Pro Reasoning', id: 'mimo-v2-pro', enabled: true, icon: '🪐', provider: 'Xiaomi', price: 'Direct Provider', supportsImage: false },
+    { name: 'Qwen 3.6 Plus Reasoning', id: 'qwen-3.6-plus', enabled: true, icon: '🔵', provider: 'Alibaba Cloud', price: 'Direct Provider', supportsImage: false },
+  ]
+
   // Dynamically load aiModels based on mode
   useEffect(() => {
     if (isSimulation) {
-      setAiModels([
-        { name: 'GLM 5.1 Reasoning', id: 'glm-5.1', enabled: true, icon: '🧠', provider: 'Ollama', price: 'Zero-Cost Local' },
-        { name: 'GLM 5 Reasoning', id: 'glm-5', enabled: true, icon: '🧠', provider: 'Ollama', price: 'Zero-Cost Local' },
-        { name: 'Grok 4.3 Multi-Agent', id: 'grok-4.3', enabled: true, icon: '🛡️', provider: 'Ollama', price: 'Zero-Cost Local' },
-        { name: 'MiniMax M2.7', id: 'minimax-m2.7', enabled: true, icon: '🪐', provider: 'Ollama', price: 'Zero-Cost Local' },
-        { name: 'DeepSeek R1', id: 'deepseek-r1', enabled: true, icon: '🔵', provider: 'Ollama', price: 'Zero-Cost Local' },
-        { name: 'Llama 3 (70B)', id: 'llama-3', enabled: true, icon: '🦙', provider: 'Ollama', price: 'Zero-Cost Local' },
-        { name: 'Mistral Large', id: 'mistral-large', enabled: true, icon: '🌪️', provider: 'Ollama', price: 'Zero-Cost Local' },
-      ])
+      setAiModels(CLOUD_MODELS.map(m => ({ ...m, price: 'Simulation Mode' })))
     } else {
-      fetch(`${API_BASE}/payments/providers/openrouter`)
-        .then(res => res.json())
-        .then(data => {
-          if (data && Array.isArray(data.models)) {
-            const dynamicModels = data.models.map(m => ({
-              name: m.label,
-              id: m.id,
-              enabled: true,
-              icon: m.id.includes('grok') ? '🛡️' : (m.id.includes('minimax') ? '🪐' : '🧠'),
-              provider: 'OpenRouter',
-              price: m.pricing ? `Dynamic Rate: $${(m.pricing.prompt * 1000000).toFixed(2)}/1M` : 'Provide API Key for live quotes'
-            }))
-            setAiModels(dynamicModels)
-          } else {
-            setAiModels([{ name: 'OpenRouter System', id: 'fallback', enabled: false, icon: '⚠', provider: 'OpenRouter', price: 'Provider response unavailable' }])
-          }
-        })
-        .catch(() => {
-          setAiModels([{ name: 'OpenRouter System', id: 'err', enabled: false, icon: '⚠', provider: 'OpenRouter', price: 'Dynamic Pricing Offline' }])
-        })
+      setAiModels(CLOUD_MODELS)
     }
   }, [isSimulation])
 
@@ -166,9 +150,14 @@ export default function ConfigPage() {
                   <div className="flex-1">
                     <div className="font-bold text-sm flex gap-2 items-center">
                       {model.name}
-                      <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ${model.provider === 'OpenRouter' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}`}>
+                      <span className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase bg-purple-500/10 text-purple-400 border border-purple-500/20">
                         {model.provider}
                       </span>
+                      {model.supportsImage && (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                          🖼️ IMAGE
+                        </span>
+                      )}
                     </div>
                     <div className="flex gap-3 mt-1 items-center">
                       <div className="text-[10px] font-mono opacity-40 truncate max-w-[150px]">{model.id}</div>

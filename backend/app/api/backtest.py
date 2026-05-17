@@ -55,6 +55,9 @@ async def run_backtest(request: BacktestRequest):
             start_date=request.start_date,
             end_date=request.end_date,
             initial_capital=request.initial_capital,
+            backtest_model=request.backtest_model or "glm-5",
+            backtest_api_key=request.backtest_api_key or "",
+            backtest_base_url=request.backtest_base_url or "",
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Backtest error: {str(e)}")

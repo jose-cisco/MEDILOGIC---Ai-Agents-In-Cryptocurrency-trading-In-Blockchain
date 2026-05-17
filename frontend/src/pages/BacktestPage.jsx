@@ -4,12 +4,19 @@ import { API_BASE } from '../App'
 import { useTheme } from '../contexts/ThemeContext'
 import TradingViewWidget from '../components/TradingViewWidget'
 
-// ── Backtest model options (Strictly FREE local models via Ollama) ──────────
+// ── Backtest model options (Modal GLM-5 Serverless Endpoint) ──────────────
+// https://modal.com/glm-5-endpoint — GPU-accelerated inference for backtesting
+// MUST match backend BacktestRequest.backtest_model field
 const BACKTEST_MODELS = [
-  { id: 'glm-5.1', name: 'GLM-5.1 Reasoning', provider: 'Ollama', desc: 'Free local reasoning — Planning & Analysis' },
-  { id: 'glm-5',   name: 'GLM-5 Reasoning',   provider: 'Ollama', desc: 'Free local reasoning — Technical Design' },
-  { id: 'minimax-m2.7', name: 'MiniMax M2.7', provider: 'Ollama', desc: 'Free local agentic model — Tools & Logic' },
+  { id: 'glm-5',   name: 'GLM-5 Reasoning',   provider: 'Modal', desc: 'Modal serverless GPU — Strategy & Analysis' },
+  { id: 'glm-5.1', name: 'GLM-5.1 Reasoning', provider: 'Modal', desc: 'Modal serverless GPU — Planning & Design' },
 ]
+
+// Mask API key for display: show only last 4 chars as ****abcd
+function maskApiKey(key) {
+  if (!key || key.length <= 4) return key ? '****' : ''
+  return '****' + key.slice(-4)
+}
 
 function BacktestRagPanel({ ragMeta }) {
   const [open, setOpen] = useState(false)
@@ -103,7 +110,7 @@ function BacktestRagPanel({ ragMeta }) {
               borderLeft: '3px solid var(--accent-green)',
             }}>
               <div style={{ color: 'var(--text-secondary)', fontWeight: 600, marginBottom: 4 }}>
-                RAG Synthesis (Ollama)
+                RAG Synthesis (Modal GLM-5)
               </div>
               <div style={{ color: 'var(--text-primary)', lineHeight: 1.6 }}>
                 {ragMeta.summary}
@@ -125,7 +132,9 @@ export default function BacktestPage() {
   const [endDate, setEndDate] = useState('')
   const [capital, setCapital] = useState('10000')
   const [mode, setMode] = useState('llm')
-  const [backtestModel, setBacktestModel] = useState('glm-5') // Default: GLM-5 (Ollama)
+  const [backtestModel, setBacktestModel] = useState('glm-5') // Default: GLM-5 (Modal)
+  const [backtestApiKey, setBacktestApiKey] = useState('')
+  const [backtestBaseUrl, setBacktestBaseUrl] = useState('https://api.us-west-2.modal.direct/v1/')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState(null)
   const [ragMeta, setRagMeta] = useState(null)
@@ -152,8 +161,10 @@ export default function BacktestPage() {
           start_date: startDate,
           end_date: endDate,
           initial_capital: parseFloat(capital),
-          chain: chain, // Use selected chain (ethereum, bitcoin, or solana)
-          backtest_model: backtestModel, // Pass selected model to backend
+          chain: chain,
+          backtest_model: backtestModel,
+          backtest_api_key: backtestApiKey || undefined,
+          backtest_base_url: backtestBaseUrl || undefined,
         }),
       } : {}
 
@@ -194,7 +205,7 @@ export default function BacktestPage() {
       <div>
         <h1 className="text-2xl font-bold mb-1">Backtesting Engine</h1>
         <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-          Test strategies with GLM-5 or GLM-5.1 (Ollama) + Hybrid RAG before live trading
+          Test strategies with GLM-5 or GLM-5.1 (Modal) + Hybrid RAG before live trading
         </p>
         <div className="mt-2 flex flex-wrap gap-2">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider"
@@ -213,8 +224,8 @@ export default function BacktestPage() {
             📚 Hybrid RAG (Semantic + BM25) — same as live trading
           </div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium"
-               style={{ background: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px solid rgba(16,185,129,0.2)' }}>
-            🦙 Ollama only — GLM-5 or GLM-5.1 (free, local)
+                style={{ background: 'rgba(139,92,246,0.1)', color: '#8b5cf6', border: '1px solid rgba(139,92,246,0.2)' }}>
+            ⚡ Modal — GLM-5 or GLM-5.1 (serverless GPU)
           </div>
         </div>
       </div>
@@ -250,9 +261,48 @@ export default function BacktestPage() {
               <div className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
                 {selectedModel?.desc}
               </div>
-              <div className="text-xs mt-1 p-1.5 rounded" 
-                   style={{ background: 'rgba(16,185,129,0.1)', color: 'var(--accent-green)' }}>
-                🆓 Free — runs locally with Ollama
+              <div className="text-xs mt-1 p-1.5 rounded"
+                   style={{ background: 'rgba(139,92,246,0.1)', color: '#8b5cf6' }}>
+                ⚡ Modal serverless GPU — requires API key
+              </div>
+            </div>
+          )}
+
+          {mode === 'llm' && (
+            <div>
+              <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--text-secondary)' }}>
+                API Key
+              </label>
+              <input
+                type="password"
+                value={backtestApiKey}
+                onChange={e => setBacktestApiKey(e.target.value)}
+                placeholder="Your Modal API key"
+                className="w-full"
+              />
+              <div className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
+                {backtestApiKey
+                  ? <span style={{ color: '#8b5cf6' }}>🔑 Key set: {maskApiKey(backtestApiKey)}</span>
+                  : <>Get your key at <a href="https://modal.com" target="_blank" rel="noopener noreferrer" style={{ color: '#8b5cf6' }}>modal.com</a></>
+                }
+              </div>
+            </div>
+          )}
+
+          {mode === 'llm' && (
+            <div>
+              <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--text-secondary)' }}>
+                Base URL
+              </label>
+              <input
+                type="url"
+                value={backtestBaseUrl}
+                onChange={e => setBacktestBaseUrl(e.target.value)}
+                placeholder="https://api.us-west-2.modal.direct/v1/"
+                className="w-full"
+              />
+              <div className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
+                Modal GLM-5 endpoint URL (or compatible OpenAI API)
               </div>
             </div>
           )}

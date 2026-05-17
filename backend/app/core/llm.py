@@ -4,6 +4,7 @@ LLM Provider Routing — Direct Provider Connection
 Each model connects directly to its provider's API:
 
   • glm-5.1 → io.net (IONET_API_KEY)
+  • glm-5 → Modal serverless (MODAL_API_KEY) — backtesting only
   • grok-4.3 → x.ai v1 (XAI_API_KEY)
   • grok-4.20-0309-v2 → x.ai v2 (XAI_API_KEY)
   • mimo-v2-pro → Xiaomi (XIAOMI_API_KEY)
@@ -11,9 +12,9 @@ Each model connects directly to its provider's API:
 
 No OpenRouter dependency - each provider is connected independently.
 
-Ollama is NEVER used for live/paper trading — only for backtesting.
-Set the appropriate API key in .env to activate each provider.
-Falls back to Ollama ONLY when no cloud keys are configured (local dev).
+Backtesting uses Modal GLM-5 endpoint (https://api.us-west-2.modal.direct/v1/)
+by default. Per-request API key and base URL can be provided from the
+frontend. Falls back to Ollama ONLY when no Modal key is configured.
 
 Per-role tuning (temperature, top_p, max_tokens, frequency/presence penalty)
 is read from Settings so each agent gets optimal inference parameters.
@@ -40,6 +41,12 @@ logger = logging.getLogger(__name__)
 # Context variable to track if we are currently in backtest mode
 # This ensures that cloud LLMs are NEVER instantiated during backtests to avoid costs.
 is_backtest_mode: ContextVar[bool] = ContextVar("is_backtest_mode", default=False)
+
+# Context variables for custom LLM provider overrides (per-request)
+custom_llm_provider: ContextVar[str] = ContextVar("custom_llm_provider", default="")
+custom_llm_api_key: ContextVar[str] = ContextVar("custom_llm_api_key", default="")
+custom_llm_base_url: ContextVar[str] = ContextVar("custom_llm_base_url", default="")
+custom_llm_model: ContextVar[str] = ContextVar("custom_llm_model", default="")
 
 
 # ─── Direct Provider Model Catalogue ─────────────────────────────────────────
@@ -225,7 +232,7 @@ def _get_modal_llm(
     frequency_penalty: float = 0.0,
     presence_penalty: float = 0.0,
 ) -> BaseChatModel:
-    """GLM-5 via Modal serverless endpoint (https://modal.com/glm-5-endpoint).
+    """GLM-5 via Modal serverless endpoint (https://api.us-west-2.modal.direct/v1/).
     
     Used for backtesting simulation when BACKTEST_USE_MODAL=True.
     Modal provides GPU-accelerated inference for high-performance
@@ -578,14 +585,21 @@ def get_controller_llm(model_id: str = "glm-5.1", **overrides) -> BaseChatModel:
     )
 
 
-def get_backtest_llm(**overrides) -> BaseChatModel:
+def get_backtest_llm(
+    backtest_model: str = "",
+    backtest_api_key: str = "",
+    backtest_base_url: str = "",
+    **overrides,
+) -> BaseChatModel:
     """
-    Backtest LLM — uses Modal (GLM-5) if configured, otherwise Ollama.
+    Backtest LLM — uses Modal (GLM-5/GLM-5.1) endpoint by default.
     
-    Modal endpoint: https://modal.com/glm-5-endpoint
-    When BACKTEST_USE_MODAL=True and MODAL_API_KEY is set, routes through
-    Modal's serverless GPU infrastructure for high-performance backtesting.
-    Otherwise falls back to Ollama (cloud/local).
+    Modal endpoint: https://api.us-west-2.modal.direct/v1/
+    
+    Priority:
+    1. Per-request overrides (backtest_api_key, backtest_base_url, backtest_model)
+    2. Server MODAL_API_KEY + MODAL_BASE_URL + MODAL_MODEL
+    3. Ollama fallback (only if no Modal config at all)
     
     Optimal: temperature=0.15, top_p=0.90, max_tokens=4096
     Rationale: Backtesting needs slight creativity to simulate diverse
@@ -597,15 +611,33 @@ def get_backtest_llm(**overrides) -> BaseChatModel:
     params = _backtest_params()
     params.update(overrides)
     
-    # Use Modal GLM-5 endpoint if configured
-    if settings.BACKTEST_USE_MODAL and settings.MODAL_API_KEY:
-        logger.info("Backtest → Modal GLM-5 (https://modal.com/glm-5-endpoint)")
-        return _get_modal_llm(
+    # Resolve effective API key, base URL, and model
+    effective_api_key = backtest_api_key or settings.MODAL_API_KEY
+    effective_base_url = backtest_base_url or settings.MODAL_BASE_URL
+    effective_model = backtest_model or settings.MODAL_MODEL or "glm-5"
+    
+    # Use Modal GLM-5 endpoint if API key is available (per-request or server config)
+    if effective_api_key:
+        logger.info(
+            "Backtest → Modal %s (%s)",
+            effective_model, effective_base_url,
+        )
+        from langchain_openai import ChatOpenAI
+        return ChatOpenAI(
+            base_url=effective_base_url,
+            api_key=effective_api_key,
+            model=effective_model,
             temperature=params.get("temperature", 0.15),
-            top_p=params.get("top_p", 0.90),
+            model_kwargs={
+                "top_p": params.get("top_p", 0.90),
+                "frequency_penalty": params.get("frequency_penalty", 0.0),
+                "presence_penalty": params.get("presence_penalty", 0.0),
+            },
             max_tokens=params.get("num_predict", 4096),
         )
     
+    # Fallback to Ollama only when no Modal config is available
+    logger.warning("Backtest → Ollama fallback (no Modal API key configured)")
     return _get_backtest_ollama_llm(**params)
 
 

@@ -14,15 +14,15 @@ class Settings(BaseSettings):
 
     # ── Modal — GLM-5 Endpoint (Backtesting Simulation) ──────────────────────
     # Modal serverless endpoint for GLM-5 backtesting simulation.
-    # URL: https://modal.com/glm-5-endpoint
+    # URL: https://api.us-west-2.modal.direct/v1/
     # Used for: backtesting crypto trading strategies with simulated mock money.
     # When MODAL_API_KEY is set, backtesting will route through Modal's
     # serverless infrastructure for high-performance GPU inference.
     MODAL_API_KEY: str = ""
-    MODAL_BASE_URL: str = "https://modal.com/glm-5-endpoint"
+    MODAL_BASE_URL: str = "https://api.us-west-2.modal.direct/v1/"
     MODAL_MODEL: str = "glm-5"
-    # When True, backtesting uses Modal endpoint instead of local Ollama.
-    BACKTEST_USE_MODAL: bool = False
+    # When True, backtesting uses Modal endpoint (default — Modal is primary backtesting provider).
+    BACKTEST_USE_MODAL: bool = True
     # ── Mock Money Simulation (Backtesting) ──────────────────────────────────
     # Simulated cryptocurrency balances for backtesting with mock money.
     # These define the virtual portfolio used in backtesting simulations.

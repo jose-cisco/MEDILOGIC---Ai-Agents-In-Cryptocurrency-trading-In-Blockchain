@@ -18,7 +18,6 @@ from datetime import datetime
 import logging
 
 from app.core.config import get_settings
-from app.core.auth import require_auth
 from app.core.identity_verification import require_verified_identity
 
 logger = logging.getLogger(__name__)

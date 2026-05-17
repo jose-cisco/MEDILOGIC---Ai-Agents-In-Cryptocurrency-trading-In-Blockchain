@@ -71,7 +71,7 @@ class QueryRequest(BaseModel):
 
 
 class ScrapeUrlRequest(BaseModel):
-    urls: list[str] = Field(default_factory=list)
+    urls: list[str] = Field(default_factory=list, min_length=1, max_length=10)
     task: str = Field(min_length=5, max_length=4000)
     source_label: str = Field(default="web-news")
     max_pages: int = Field(default=5, ge=1, le=8)
@@ -91,13 +91,18 @@ async def add_documents(request: AddDocsRequest):
 
 @router.post("/upload")
 async def upload_files(
-    files: List[UploadFile] = File(...),
+    files: List[UploadFile] = File(..., max_length=10),
     source: str = Form(default="file-upload"),
 ):
     """
-    Ingest one or more PDF or TXT files into the hybrid knowledge base.
+    Ingest 1–10 PDF or TXT files into the hybrid knowledge base.
     Each file is parsed into text, then chunked and embedded.
+    Maximum 10 files per request.
     """
+    if len(files) > 10:
+        raise HTTPException(status_code=400, detail=f"Maximum 10 files per request, got {len(files)}")
+    if len(files) < 1:
+        raise HTTPException(status_code=400, detail="At least 1 file required")
     docs = []
     errors = []
     for f in files:

@@ -39,7 +39,7 @@ const getFaqItems = (isSimulation) => [
     icon: '💎',
     content: isSimulation ? (
       <div className="space-y-3">
-        <p><strong>Yes.</strong> Backtesting uses local Ollama models (GLM-5, MiniMax) and is strictly exempted from x402 payments.</p>
+        <p><strong>Yes.</strong> Backtesting uses Modal GLM-5 serverless GPU and is strictly exempted from x402 payments.</p>
         <p>We believe safety is paramount. You should be able to simulate 10,000 strategies without spending a single cent on cloud inference or transaction fees.</p>
       </div>
     ) : (

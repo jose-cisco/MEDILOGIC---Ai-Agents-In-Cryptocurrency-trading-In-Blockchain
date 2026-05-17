@@ -58,8 +58,7 @@ from app.core.security import log_security_event, SecurityEventType
 from app.core.cloud_identity_store import cloud_store
 from app.core.cybersecurity_beware import check_cybersecurity_beware_lists
 
-if TYPE_CHECKING:
-    from fastapi import Request
+from fastapi import Request
 
 logger = logging.getLogger(__name__)
 
